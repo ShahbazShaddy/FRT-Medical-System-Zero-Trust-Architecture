@@ -60,3 +60,4 @@ config.json
 .secrets.json
 flask_session
 model_cache
+email_config.py
