@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+.env
+.venv
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Encryption keys and sensitive data
+**/keys/
+**/certs/
+*.pem
+*.key
+*.der
+*.p12
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Node.js
+node_modules/
+bower_components/
+
+# Local config files
+config.json
+.secrets.json
+flask_session
+model_cache

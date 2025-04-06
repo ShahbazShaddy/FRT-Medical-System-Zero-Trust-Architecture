@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encryption Test Tool - FRT Healthcare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+    <script src="{{ url_for('static', filename='crypto-utils.js') }}"></script>
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+        }
+        .status {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .back-link {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body data-user-id="{{ session['user_id'] }}">
+    <div class="test-container">
+        <h1>Encryption Test Tool</h1>
+        <p>Use this tool to test encryption key generation and storage.</p>
+        
+        <div class="test-section">
+            <h3>System Diagnostics</h3>
+            <button id="run-diagnostics">Run Diagnostics</button>
+            <p id="diagnostics-status" class="status">Not run yet</p>
+            <textarea id="diagnostics-output" readonly></textarea>
+        </div>
+        
+        <div class="test-section">
+            <h3>Existing Keys Check</h3>
+            <button id="check-existing-keys">Check Existing Keys</button>
+            <p id="existing-key-status" class="status">Not checked yet</p>
+        </div>
+        
+        <div class="test-section">
+            <h3>Browser Key Generation</h3>
+            <button id="generate-browser-keys">Generate Keys in Browser</button>
+            <p id="browser-key-status" class="status">Not generated yet</p>
+        </div>
+        
+        <div class="test-section">
+            <h3>Server Key Generation</h3>
+            <button id="generate-server-keys">Generate Keys on Server</button>
+            <p id="server-key-status" class="status">Not generated yet</p>
+        </div>
+        
+        <div class="test-section">
+            <h3>Key Output</h3>
+            <p>Public Key:</p>
+            <textarea id="public-key-output" readonly></textarea>
+            <p>Private Key:</p>
+            <textarea id="private-key-output" readonly></textarea>
+        </div>
+        
+        <a href="{{ session['role'] == 'Doctor' ? '/doctor-dashboard' : '/patient-dashboard' }}" class="back-link">Back to Dashboard</a>
+    </div>
+    
+    <script src="{{ url_for('static', filename='encryption-test.js') }}"></script>
+</body>
+</html>

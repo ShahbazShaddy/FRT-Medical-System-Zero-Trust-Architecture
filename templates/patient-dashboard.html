@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Dashboard - FRT Healthcare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Add Socket.IO client library -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <!-- Add crypto utilities -->
+    <script src="{{ url_for('static', filename='crypto-utils.js') }}"></script>
+</head>
+<body data-user-id="{{ session['user_id'] }}">
+    <div class="dashboard-container">
+        <nav class="dashboard-nav">
+            <div class="nav-header">
+                <h2>FRT Healthcare</h2>
+                <p>Welcome, {{ session['full_name'] }}</p>
+            </div>
+            <a href="/auth/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </nav>
+
+        <div class="dashboard-content">
+            <div class="dashboard-grid">
+                <!-- FRT Performer Card -->
+                <div class="dashboard-card" onclick="window.location.href='/chat'">
+                    <i class="fas fa-robot"></i>
+                    <h3>FRT Performer</h3>
+                    <p>Start your Functional Rating Test with our AI assistant</p>
+                </div>
+
+                <!-- Assessment Results Card -->
+                <div class="dashboard-card" onclick="showResults()">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Assessment Results</h3>
+                    <p>View your AI-generated assessment results and risk analysis</p>
+                </div>
+
+                <!-- Test History Card -->
+                <div class="dashboard-card" onclick="showHistory()">
+                    <i class="fas fa-history"></i>
+                    <h3>Test History</h3>
+                    <p>Track your progress and view past test results</p>
+                </div>
+
+                <!-- Recommendations Card -->
+                <div class="dashboard-card" onclick="showRecommendations()">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>Recommendations</h3>
+                    <p>Get personalized health recommendations and exercises</p>
+                </div>
+
+                <!-- Doctor Association Card -->
+                <div class="dashboard-card" onclick="manageDoctorAssociation()">
+                    <i class="fas fa-user-md"></i>
+                    <h3>My Doctor</h3>
+                    <p>Manage your association with a healthcare provider</p>
+                </div>
+
+                <!-- Edit Profile Card - NEW CARD -->
+                <div class="dashboard-card" onclick="editProfile()">
+                    <i class="fas fa-user-edit"></i>
+                    <h3>Edit Profile</h3>
+                    <p>Update your personal information and settings</p>
+                </div>
+
+                <!-- Help & FAQs Card -->
+                <div class="dashboard-card" onclick="showFAQs()">
+                    <i class="fas fa-question-circle"></i>
+                    <h3>Help & FAQs</h3>
+                    <p>Access help resources and frequently asked questions</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>

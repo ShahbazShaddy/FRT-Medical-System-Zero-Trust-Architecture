@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard - FRT Healthcare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='crypto-utils.js') }}"></script>
+</head>
+<body data-user-id="{{ session['user_id'] }}">
+    <div class="dashboard-container">
+        <nav class="dashboard-nav">
+            <div class="nav-header">
+                <h2>FRT Healthcare</h2>
+                <p>Welcome, Dr. {{ session['full_name'] }}</p>
+                <p class="doctor-id">Your Doctor ID: <span id="doctorId"></span></p>
+            </div>
+            <a href="/auth/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        </nav>
+
+        <div class="dashboard-content">
+            <div class="dashboard-grid">
+                <!-- Associated Patients Card -->
+                <div class="dashboard-card" onclick="showPatients()">
+                    <i class="fas fa-users"></i>
+                    <h3>My Patients</h3>
+                    <p>View and manage your associated patients</p>
+                </div>
+
+                <!-- Patient Records Card -->
+                <div class="dashboard-card" onclick="showPatientRecords()">
+                    <i class="fas fa-file-medical"></i>
+                    <h3>Patient Records</h3>
+                    <p>View detailed FRT history and assessments of your patients</p>
+                </div>
+
+                <!-- Recommendations Card -->
+                <div class="dashboard-card" onclick="showRecommendationForm()">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>Provide Recommendations</h3>
+                    <p>Send personalized health recommendations to your patients</p>
+                </div>
+
+                <!-- Analytics Card -->
+                <div class="dashboard-card" onclick="showAnalytics()">
+                    <i class="fas fa-chart-bar"></i>
+                    <h3>Analytics</h3>
+                    <p>View statistics and trends across your patient population</p>
+                </div>
+
+
+                <!-- Edit Profile Card - Modified Card -->
+                <div class="dashboard-card" onclick="editProfile()">
+                    <i class="fas fa-user-edit"></i>
+                    <h3>Edit Profile</h3>
+                    <p>Update your professional information and account settings</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='doctor-dashboard.js') }}"></script>
+</body>
+</html>

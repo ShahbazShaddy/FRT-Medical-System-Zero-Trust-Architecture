@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to FRT Healthcare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="landing-container">
+        <div class="hero">
+            <h1>FRT Healthcare</h1>
+            <p class="subtitle">Your AI-Powered Healthcare Assistant</p>
+            <p class="description">Get instant health assessments and connect with professional nurses using our advanced Functional Rating Test system.</p>
+        </div>
+        <div class="button-group">
+            <a href="/login" class="landing-btn">Sign In</a>
+            <a href="/signup" class="landing-btn patient-btn">Register as Patient</a>
+            <a href="/signup" class="landing-btn nurse-btn" onclick="setNurseRole(event)">Join as Nurse</a>
+            <a href="/signup" class="landing-btn doctor-btn" onclick="setDoctorRole(event)">Join as Doctor</a>
+        </div>
+    </div>
+    <script>
+        function setNurseRole(event) {
+            localStorage.setItem('selectedRole', 'Nurse');
+        }
+        function setDoctorRole(event) {
+            localStorage.setItem('selectedRole', 'Doctor');
+        }
+    </script>
+</body>
+</html>

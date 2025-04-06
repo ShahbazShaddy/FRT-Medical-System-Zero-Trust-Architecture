@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Doctor Profile - FRT Healthcare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='auth.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="auth-container profile-container">
+        <h1>Complete Your Doctor Profile</h1>
+        <p class="subtitle">Please provide your professional information to complete your profile</p>
+        
+        <div style="background: #f8f9fa; padding: 5px; margin-bottom: 10px; border-radius: 5px; font-size: 12px;">
+            Debug info: User ID: {{ session['user_id'] }}, Role: {{ session['role'] }}
+        </div>
+        
+        <form id="profileForm" class="auth-form">
+            <input type="hidden" id="user-role" value="Doctor">
+            
+            <!-- Common fields -->
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" name="phone" placeholder="Phone Number" required>
+            </div>
+            
+            <!-- Doctor-specific fields -->
+            <div class="form-group">
+                <label for="specialization">Specialization</label>
+                <input type="text" id="specialization" name="specialization" placeholder="Your medical specialization" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="office-hours">Office Hours</label>
+                <input type="text" id="office-hours" name="office_hours" placeholder="e.g. Mon-Fri: 9AM-5PM" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="hospital-clinic">Hospital/Clinic Name & Address</label>
+                <textarea id="hospital-clinic" name="hospital_clinic" placeholder="Name and address of your practice" required></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="experience">Experience</label>
+                <input type="text" id="experience" name="experience" placeholder="e.g. 5 years in cardiology" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="education">Education & Qualifications</label>
+                <textarea id="education" name="education" placeholder="List your degrees and certifications" required></textarea>
+            </div>
+            
+            <div id="status-message" class="status-message"></div>
+            
+            <button type="submit" class="auth-btn">Complete Profile</button>
+        </form>
+    </div>
+    
+    <div id="request-status" style="position: fixed; bottom: 10px; right: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; display: none;"></div>
+    
+    <script>
+        // Request logging function
+        const originalFetch = window.fetch;
+        window.fetch = function() {
+            const statusEl = document.getElementById('request-status');
+            statusEl.style.display = 'block';
+            statusEl.textContent = `Sending request to: ${arguments[0]}`;
+            
+            return originalFetch.apply(this, arguments)
+                .then(response => {
+                    statusEl.textContent = `Response received: ${response.status}`;
+                    return response;
+                })
+                .catch(error => {
+                    statusEl.textContent = `Request failed: ${error.message}`;
+                    throw error;
+                });
+        };
+    </script>
+    
+    <script src="{{ url_for('static', filename='profile.js') }}"></script>
+</body>
+</html>
