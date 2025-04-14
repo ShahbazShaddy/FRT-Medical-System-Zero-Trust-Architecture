@@ -79,3 +79,4 @@ def handle_disconnect():
 # Update the app.run() to use SocketIO
 if __name__ == "__main__":
     socketio.run(app, debug=True)
+    
