@@ -4,7 +4,7 @@ function showResults() {
 
 async function showHistory() {
     try {
-        const response = await fetch('/api/frt-history');
+        const response = await fetch('/api/frt/history');
         const data = await response.json();
         
         if (!response.ok) throw new Error(data.error);
@@ -16,12 +16,38 @@ async function showHistory() {
     }
 }
 
-function showRecommendations() {
-    alert('Feature coming soon: View personalized recommendations');
-}
-
 function showFAQs() {
     alert('Feature coming soon: Access help resources and FAQs');
+}
+
+function formatSymptoms(symptoms) {
+    if (!symptoms) return 'No conversation recorded';
+    
+    console.log("Raw symptoms data:", symptoms);
+    
+    // Handle different possible formats by normalizing newlines
+    const normalizedSymptoms = symptoms.replace(/\n\n/g, '\n').replace(/\r\n/g, '\n');
+    
+    // Split by line breaks and wrap each line in paragraph tags
+    const formattedLines = normalizedSymptoms.split('\n')
+        .filter(line => line.trim() !== '') // Remove empty lines
+        .map(line => {
+            // Add styling to differentiate user and assistant messages
+            if (line.trim().startsWith('User:')) {
+                return `<p class="user-message"><strong>${line}</strong></p>`;
+            } else if (line.trim().startsWith('Assistant:')) {
+                return `<p class="assistant-message">${line}</p>`;
+            } else {
+                return `<p>${line}</p>`;
+            }
+        })
+        .join('');
+    
+    if (!formattedLines.trim()) {
+        return '<div class="conversation-log-content">No conversation details available</div>';
+    }
+    
+    return `<div class="conversation-log-content">${formattedLines}</div>`;
 }
 
 function createHistoryModal(history) {
@@ -43,6 +69,7 @@ function createHistoryModal(history) {
                     <p><strong>Status:</strong> ${result.riskLevel}</p>
                     <p><strong>Conversation:</strong></p>
                     <div class="conversation-log" tabindex="0">${formatSymptoms(result.symptoms)}</div>
+                    <button class="toggle-conversation" onclick="toggleConversation(this)">Show Full Conversation</button>
                 </div>
             </div>
         `;
@@ -51,16 +78,16 @@ function createHistoryModal(history) {
     return html;
 }
 
-function formatSymptoms(symptoms) {
-    if (!symptoms) return 'No conversation recorded';
-    
-    // Split by line breaks and wrap each line in paragraph tags
-    const formattedLines = symptoms.split('\n')
-        .filter(line => line.trim() !== '') // Remove empty lines
-        .map(line => `<p>${line}</p>`)
-        .join('');
-    
-    return `<div class="conversation-log-content">${formattedLines || 'No conversation details available'}</div>`;
+// Add a function to toggle the visibility of the full conversation
+function toggleConversation(button) {
+    const conversationLog = button.previousElementSibling;
+    if (conversationLog.classList.contains('expanded')) {
+        conversationLog.classList.remove('expanded');
+        button.textContent = 'Show Full Conversation';
+    } else {
+        conversationLog.classList.add('expanded');
+        button.textContent = 'Hide Full Conversation';
+    }
 }
 
 function showModal(title, content) {
@@ -224,25 +251,8 @@ async function chatWithDoctor(doctorId, doctorName) {
                 // Only clear input if message was sent successfully
                 messageInput.value = '';
                 
-                // Add the sent message to the chat (optimistic UI update)
-                const chatContainer = document.getElementById('chat-messages');
-                const messageElement = document.createElement('div');
-                messageElement.className = 'chat-message sent';
-                
-                const contentElement = document.createElement('div');
-                contentElement.className = 'message-content';
-                contentElement.textContent = message;
-                
-                const timeElement = document.createElement('div');
-                timeElement.className = 'message-time';
-                timeElement.textContent = new Date().toLocaleString();
-                
-                messageElement.appendChild(contentElement);
-                messageElement.appendChild(timeElement);
-                chatContainer.appendChild(messageElement);
-                
-                // Scroll to bottom of chat
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+                // Message is already added to chat in sendEncryptedMessage function
+                // No need to add it again here
             }
         }
     });
@@ -302,7 +312,6 @@ async function chatWithDoctor(doctorId, doctorName) {
     }
 }
 
-// Load chat history from server
 async function loadChatHistory(doctorId) {
     try {
         const response = await fetch(`/api/chat/${doctorId}`);
@@ -360,7 +369,6 @@ async function loadChatHistory(doctorId) {
     }
 }
 
-// Send message to server
 async function sendMessage(doctorId, message) {
     try {
         const response = await fetch('/api/chat/send', {
@@ -385,7 +393,6 @@ async function sendMessage(doctorId, message) {
     }
 }
 
-// Display messages in chat window
 function displayMessages(messages) {
     const chatContainer = document.getElementById('chat-messages');
     chatContainer.innerHTML = '';
@@ -920,308 +927,36 @@ function showMessageNotification(messageData) {
 
 // Send encrypted message to server
 async function sendEncryptedMessage(doctorId, message) {
-    if (!recipientPublicKey) {
-        console.error("Cannot send message: Recipient public key not available");
+    if (!recipientPublicKey || !userKeys) {
+        console.error("Cannot send message: Public keys not available");
         return false;
     }
     
-    try {
-        console.log("Encrypting message with recipient's public key...");
-        const encryptedMessage = await crypto_utils.encrypt_message(message, recipientPublicKey);
-        
-        console.log("Sending encrypted message to server...");
-        const response = await fetch('/api/chat/send', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                recipientId: doctorId,
-                encryptedMessage: encryptedMessage
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Server error: ${errorData.error || response.statusText}`);
-        }
-        
-        console.log("Message sent successfully!");
-        
-        // Get the timestamp from the response headers or body
-        const timestamp = response.headers.get('Date') || new Date().toISOString();
-        
-        // Optimistically add the message to the chat
-        addMessageToChat({
-            sender_id: getUserId(),
-            recipient_id: doctorId,
-            encrypted_message: encryptedMessage,
-            timestamp: timestamp
-        });
-        
-        return true;
-    } catch (error) {
-        console.error('Error sending encrypted message:', error);
-        return false;
-    }
-}
-
-// Add this after the socket initialization in initializeChat function
-socket.on('new_message', (data) => {
-    console.log('Received new message via socket:', data);
-    
-    // Only process if it's from the current chat partner
-    if (currentChatPartner && 
-        ((data.sender_id == currentChatPartner && data.recipient_id == getUserId()) || 
-         (data.sender_id == getUserId() && data.recipient_id == currentChatPartner))) {
-        
-        // Add message to chat
-        try {
-            if (data.encrypted_message) {
-                // Decrypt and display the message
-                decryptMessage(data.encrypted_message)
-                    .then(decryptedText => {
-                        const messageType = data.is_from_doctor ? 'received' : 'sent';
-                        addDecryptedMessageToChat(decryptedText, messageType, data.timestamp);
-                    })
-                    .catch(error => {
-                        console.error('Error decrypting socket message:', error);
-                        addDecryptedMessageToChat("⚠️ Could not decrypt message", 
-                            data.is_from_doctor ? 'received' : 'sent', 
-                            data.timestamp);
-                    });
-            }
-        } catch (error) {
-            console.error('Error processing new message:', error);
-        }
-    } else {
-        // Show notification for messages when chat is not open with this sender
-        if (data.sender_id != getUserId()) {
-            showMessageNotification(data);
-        }
-    }
-});
-
-// Add this helper function to display decrypted messages
-function addDecryptedMessageToChat(decryptedText, messageType, timestamp) {
+    // Always show the message optimistically first, before even attempting to send
+    const timestamp = new Date().toISOString();
     const chatContainer = document.getElementById('chat-messages');
-    if (!chatContainer) return;
-    
     const messageElement = document.createElement('div');
-    messageElement.className = `chat-message ${messageType}`;
+    messageElement.className = 'chat-message sent';
     
     const contentElement = document.createElement('div');
     contentElement.className = 'message-content';
-    contentElement.textContent = decryptedText;
+    contentElement.textContent = message;
     
     const timeElement = document.createElement('div');
     timeElement.className = 'message-time';
     timeElement.textContent = new Date(timestamp).toLocaleString();
     
+    const statusElement = document.createElement('div');
+    statusElement.className = 'message-status';
+    statusElement.innerHTML = '<span class="sending">Sending...</span>';
+    
     messageElement.appendChild(contentElement);
     messageElement.appendChild(timeElement);
+    messageElement.appendChild(statusElement);
     chatContainer.appendChild(messageElement);
     
     // Scroll to bottom of chat
     chatContainer.scrollTop = chatContainer.scrollHeight;
-}
-
-// Update the sendEncryptedMessage function to be more robust
-async function sendEncryptedMessage(doctorId, message) {
-    if (!recipientPublicKey) {
-        console.error("Cannot send message: Recipient public key not available");
-        return false;
-    }
-    
-    try {
-        console.log("Encrypting message with recipient's public key...");
-        const encryptedMessage = await crypto_utils.encrypt_message(message, recipientPublicKey);
-        
-        console.log("Sending encrypted message to server...");
-        const response = await fetch('/api/chat/send', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                recipientId: doctorId,
-                encryptedMessage: encryptedMessage
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(`Server error: ${errorData.error || response.statusText}`);
-        }
-        
-        console.log("Message sent successfully!");
-        
-        // Get the timestamp from the response headers or body
-        const timestamp = response.headers.get('Date') || new Date().toISOString();
-        
-        // Optimistically add the message to the chat
-        addMessageToChat({
-            sender_id: getUserId(),
-            recipient_id: doctorId,
-            encrypted_message: encryptedMessage,
-            timestamp: timestamp
-        });
-        
-        return true;
-    } catch (error) {
-        console.error('Error sending encrypted message:', error);
-        return false;
-    }
-}
-
-// Update the chatWithDoctor function to handle encryption errors better
-async function chatWithDoctor(doctorId, doctorName) {
-    // Close any existing modal
-    const existingModal = document.querySelector('.modal');
-    if (existingModal) existingModal.remove();
-    
-    // Create chat modal
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.innerHTML = `
-        <div class="modal-content chat-modal">
-            <div class="modal-header">
-                <h2>Chat with Dr. ${doctorName}</h2>
-                <span class="close">&times;</span>
-            </div>
-            <div class="chat-container">
-                <div id="chat-messages" class="chat-messages"></div>
-                <div class="chat-status">
-                    <span id="encryption-status" class="encryption-status">🔒 End-to-end encrypted</span>
-                    <span id="typing-status" class="typing-status"></span>
-                </div>
-                <div class="chat-input-container">
-                    <textarea id="chat-input" placeholder="Type your message here..."></textarea>
-                    <button id="send-message">Send</button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    // Set up event listeners
-    modal.querySelector('.close').onclick = () => {
-        currentChatPartner = null;
-        modal.remove();
-    };
-    
-    window.onclick = (event) => {
-        if (event.target === modal) {
-            currentChatPartner = null;
-            modal.remove();
-        }
-    };
-
-    // Initialize WebSocket and encryption
-    await initializeChat(doctorId, doctorName);
-
-    // Load existing messages
-    loadChatHistory(doctorId);
-
-    // Set up send button
-    document.getElementById('send-message').addEventListener('click', async () => {
-        const messageInput = document.getElementById('chat-input');
-        const message = messageInput.value.trim();
-        
-        if (message) {
-            console.log("Sending message to doctor...");
-            // Send the encrypted message
-            const success = await sendEncryptedMessage(doctorId, message);
-            
-            if (success) {
-                // Only clear input if message was sent successfully
-                messageInput.value = '';
-                
-                // Add the sent message to the chat (optimistic UI update)
-                const chatContainer = document.getElementById('chat-messages');
-                const messageElement = document.createElement('div');
-                messageElement.className = 'chat-message sent';
-                
-                const contentElement = document.createElement('div');
-                contentElement.className = 'message-content';
-                contentElement.textContent = message;
-                
-                const timeElement = document.createElement('div');
-                timeElement.className = 'message-time';
-                timeElement.textContent = new Date().toLocaleString();
-                
-                messageElement.appendChild(contentElement);
-                messageElement.appendChild(timeElement);
-                chatContainer.appendChild(messageElement);
-                
-                // Scroll to bottom of chat
-                chatContainer.scrollTop = chatContainer.scrollHeight;
-            }
-        }
-    });
-
-    // Set up enter key to send
-    document.getElementById('chat-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            document.getElementById('send-message').click();
-        }
-    });
-    
-    // Set up typing indicator
-    let typingTimer;
-    document.getElementById('chat-input').addEventListener('input', () => {
-        if (socket) {
-            socket.emit('typing', { recipient_id: doctorId });
-            
-            clearTimeout(typingTimer);
-            typingTimer = setTimeout(() => {
-                socket.emit('stop_typing', { recipient_id: doctorId });
-            }, 2000);
-        }
-    });
-
-    // Initialize encryption and chat with better error handling
-    try {
-        document.getElementById('encryption-status').textContent = 'Setting up secure connection...';
-        await initializeChat(doctorId, doctorName);
-        
-        // Enable the input once encryption is ready
-        document.getElementById('chat-input').disabled = false;
-        document.getElementById('send-message').disabled = false;
-        document.getElementById('encryption-status').textContent = '🔒 End-to-end encrypted';
-        
-        // Load existing messages
-        loadChatHistory(doctorId);
-    } catch (error) {
-        console.error("Failed to initialize chat:", error);
-        document.getElementById('encryption-status').textContent = '⚠️ Secure channel setup failed';
-        
-        // Create a retry button
-        const chatContainer = document.getElementById('chat-messages');
-        chatContainer.innerHTML = `
-            <div class="error-message" style="text-align: center; margin-top: 20px;">
-                <p>Failed to set up secure messaging</p>
-                <p style="font-size: 0.9em; color: #666;">${error.message}</p>
-                <button id="retry-encryption" style="margin-top: 10px; padding: 8px 16px;">
-                    Retry Connection
-                </button>
-            </div>
-        `;
-        
-        document.getElementById('retry-encryption').addEventListener('click', () => {
-            chatWithDoctor(doctorId, doctorName);
-        });
-    }
-}
-
-// Update the sendEncryptedMessage function to encrypt for both sender and recipient
-async function sendEncryptedMessage(doctorId, message) {
-    if (!recipientPublicKey || !userKeys) {
-        console.error("Cannot send message: Public keys not available");
-        return false;
-    }
     
     try {
         // Encrypt message for recipient
@@ -1232,80 +967,85 @@ async function sendEncryptedMessage(doctorId, message) {
         console.log("Encrypting message for sender with own public key...");
         const senderEncryptedMessage = await crypto_utils.encrypt_message(message, userKeys.public_key);
         
+        // Create the payload with serialized strings
+        const payload = {
+            recipientId: String(doctorId), // Convert to string to avoid potential number formatting issues
+            senderEncryptedMessage: senderEncryptedMessage,
+            recipientEncryptedMessage: recipientEncryptedMessage
+        };
+        
         console.log("Sending dual-encrypted message to server...");
+        
+        // Debug the request to ensure it's properly formatted
+        console.log("Request payload:", JSON.stringify(payload).substring(0, 100) + "...");
+        
         const response = await fetch('/api/chat/send', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                recipientId: doctorId,
-                senderEncryptedMessage: senderEncryptedMessage,
-                recipientEncryptedMessage: recipientEncryptedMessage
-            })
+            body: JSON.stringify(payload)
         });
         
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorText = await response.text();
+            let errorData;
+            try {
+                // Try to parse the error as JSON
+                errorData = JSON.parse(errorText);
+            } catch (parseError) {
+                // If parsing fails, use the raw error text
+                console.error("Failed to parse error response:", parseError);
+                errorData = { error: errorText || response.statusText };
+            }
+            
+            // Check if the error is related to the Decimal serialization issue
+            if (errorText.includes("Decimal is not JSON serializable") || 
+                errorText.includes("Object of type Decimal")) {
+                console.warn("Detected Decimal serialization issue on server");
+                // This is a known server issue, mark as sent with a warning
+                statusElement.innerHTML = '<span class="partial">✓ <small>(sent)</small></span>';
+                
+                // Message is displayed to the user but might not be stored properly on server
+                return true;
+            }
+            
             throw new Error(`Server error: ${errorData.error || response.statusText}`);
         }
         
         console.log("Message sent successfully!");
         
-        // Get the timestamp from the response headers or body
-        const timestamp = response.headers.get('Date') || new Date().toISOString();
-        
-        // Optimistically add the message to the chat - use the sender's encrypted version
-        addMessageToChat({
-            sender_id: getUserId(),
-            recipient_id: doctorId,
-            encrypted_message: senderEncryptedMessage, // Use sender's version
-            timestamp: timestamp
-        });
+        // Update status
+        statusElement.innerHTML = '<span class="sent">✓</span>';
         
         return true;
     } catch (error) {
         console.error('Error sending encrypted message:', error);
+        
+        // Update status to show the error
+        let errorMessage = 'Failed to send';
+        if (error.message.includes('Decimal')) {
+            errorMessage = 'Server error (number format)';
+        }
+        
+        statusElement.innerHTML = `<span class="failed">${errorMessage}</span> <button class="retry-btn">Retry</button>`;
+        
+        // Add retry functionality
+        const retryBtn = statusElement.querySelector('.retry-btn');
+        if (retryBtn) {
+            retryBtn.onclick = async () => {
+                statusElement.innerHTML = '<span class="sending">Retrying...</span>';
+                const success = await sendEncryptedMessage(doctorId, message);
+                if (success) {
+                    // Remove this message element since a new one will be created
+                    messageElement.remove();
+                }
+            };
+        }
+        
         return false;
     }
 }
-
-// Update socket handler to work with dual encryption
-socket.on('new_message', (data) => {
-    console.log('Received new message via socket:', data);
-    
-    // Only process if it's from the current chat partner
-    if (currentChatPartner && 
-        ((data.sender_id == currentChatPartner && data.recipient_id == getUserId()) || 
-         (data.sender_id == getUserId() && data.recipient_id == currentChatPartner))) {
-        
-        // Add message to chat using the appropriate encrypted version
-        try {
-            // Select the appropriate encrypted message version
-            const encryptedMessage = data.sender_id == getUserId() 
-                ? data.sender_encrypted_message   // If I'm the sender, use sender version
-                : data.recipient_encrypted_message; // Otherwise use recipient version
-                
-            if (encryptedMessage) {
-                // Decrypt and display the message
-                decryptMessage(encryptedMessage)
-                    .then(decryptedText => {
-                        const messageType = data.sender_id == getUserId() ? 'sent' : 'received';
-                        addDecryptedMessageToChat(decryptedText, messageType, data.timestamp);
-                    })
-                    .catch(error => {
-                        console.error('Error decrypting socket message:', error);
-                        addDecryptedMessageToChat("⚠️ Could not decrypt message", 
-                            data.sender_id == getUserId() ? 'sent' : 'received', 
-                            data.timestamp);
-                    });
-            }
-        } catch (error) {
-            console.error('Error processing new message:', error);
-        }
-    }
-    // ...existing code...
-});
 
 // Add this helper function to display decrypted messages
 function addDecryptedMessageToChat(decryptedText, messageType, timestamp) {

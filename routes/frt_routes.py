@@ -1,8 +1,15 @@
-from flask import Blueprint, jsonify, session, request
+from flask import Blueprint, jsonify, session, request, send_file
 from database import get_db_connection
 import os
+import time
+import asyncio
 from frt_processing import process_frt, live_frt
 from video_upload import upload_video
+from utils.pdf_generator import create_medical_report, get_groq_analysis
+
+# Create the directory for storing report files
+REPORTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'generated_reports')
+os.makedirs(REPORTS_DIR, exist_ok=True)
 
 frt_bp = Blueprint('frt', __name__, url_prefix='/api/frt')
 
@@ -17,7 +24,7 @@ def get_frt_history():
     
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(""" 
         SELECT ResultID, MaxDistance, RiskLevel, CreatedAt, Symptoms 
         FROM FRTResults 
         WHERE UserID = ? 
@@ -86,3 +93,226 @@ def live_frt_route():
         
     result = live_frt()
     return jsonify({'result': result})
+
+@frt_bp.route('/patient-results/<int:patient_id>')
+def get_patient_results(patient_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+        
+    # Verify that the requester is a doctor
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user is a doctor
+        cursor.execute("SELECT Role FROM Users WHERE UserID = ?", (session['user_id'],))
+        user = cursor.fetchone()
+        
+        if not user or user[0] != 'Doctor':
+            return jsonify({'error': 'Unauthorized access'}), 403
+        
+        # Get patient's name
+        cursor.execute("SELECT FullName FROM Users WHERE UserID = ?", (patient_id,))
+        patient = cursor.fetchone()
+        
+        if not patient:
+            return jsonify({'error': 'Patient not found'}), 404
+            
+        # Get patient's FRT results
+        cursor.execute("""
+            SELECT ResultID, MaxDistance, RiskLevel, CreatedAt, Symptoms 
+            FROM FRTResults 
+            WHERE UserID = ? 
+            ORDER BY CreatedAt DESC
+        """, (patient_id,))
+        
+        results = []
+        for row in cursor.fetchall():
+            results.append({
+                'id': row[0],
+                'maxDistance': row[1],
+                'riskLevel': row[2],
+                'date': row[3],
+                'symptoms': row[4]
+            })
+        
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
+@frt_bp.route('/generate-report', methods=['POST'])
+def generate_report():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+        
+    data = request.json
+    patient_id = data.get('patientId')
+    test_ids = data.get('testIds', [])
+    
+    if not patient_id or not test_ids:
+        return jsonify({'error': 'Missing required parameters'}), 400
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get doctor information
+        cursor.execute("""
+            SELECT u.FullName, dp.Specialization, dp.HospitalClinic
+            FROM Users u
+            LEFT JOIN DoctorProfiles dp ON u.UserID = dp.UserID
+            WHERE u.UserID = ? AND u.Role = 'Doctor'
+        """, (session['user_id'],))
+        
+        doctor_row = cursor.fetchone()
+        if not doctor_row:
+            return jsonify({'error': 'Doctor profile not found'}), 404
+        
+        doctor_data = {
+            'userId': session['user_id'],
+            'fullName': doctor_row[0],
+            'specialization': doctor_row[1],
+            'hospital_clinic': doctor_row[2]
+        }
+        
+        # Get patient information
+        cursor.execute("""
+            SELECT u.FullName, pp.DOB, pp.Gender, pp.MedicalHistory
+            FROM Users u
+            LEFT JOIN PatientProfiles pp ON u.UserID = pp.UserID
+            WHERE u.UserID = ?
+        """, (patient_id,))
+        
+        patient_row = cursor.fetchone()
+        if not patient_row:
+            return jsonify({'error': 'Patient profile not found'}), 404
+        
+        # Calculate age if DOB is available
+        age = None
+        if patient_row[1]:
+            from datetime import datetime
+            try:
+                dob = datetime.strptime(patient_row[1], '%Y-%m-%d')
+                today = datetime.today()
+                age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+            except (ValueError, TypeError):
+                # Handle date parsing errors
+                age = 'Unknown'
+        
+        patient_data = {
+            'userId': patient_id,
+            'fullName': patient_row[0],
+            'age': age or 'Not provided',
+            'gender': patient_row[2] or 'Not provided',
+            'medicalHistory': patient_row[3] or 'Not provided'
+        }
+        
+        # Get test results - convert test_ids to strings for SQL placeholders
+        test_id_strings = [str(test_id) for test_id in test_ids]
+        test_id_placeholders = ','.join(['?' for _ in test_id_strings])
+        
+        query = f"""
+            SELECT ResultID, MaxDistance, RiskLevel, CreatedAt, Symptoms 
+            FROM FRTResults 
+            WHERE ResultID IN ({test_id_placeholders}) AND UserID = ?
+            ORDER BY CreatedAt
+        """
+        
+        # Execute with string IDs and patient_id at the end
+        cursor.execute(query, test_id_strings + [str(patient_id)])
+        
+        test_results = []
+        for row in cursor.fetchall():
+            # Convert SQL date to string to avoid strptime issues
+            date_str = row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else None
+            
+            test_results.append({
+                'id': row[0],
+                'maxDistance': row[1],
+                'riskLevel': row[2],
+                'date': date_str,
+                'symptoms': row[4]
+            })
+        
+        if not test_results:
+            return jsonify({'error': 'No test results found'}), 404
+        
+        # Get AI analysis using Groq
+        analysis_text = asyncio.run(get_groq_analysis(patient_data, test_results))
+        
+        # Generate the PDF report
+        report_info = create_medical_report(doctor_data, patient_data, test_results, analysis_text)
+        
+        # Store report reference in database with all required columns
+        cursor.execute("""
+            INSERT INTO Reports (DoctorID, PatientID, FilePath, ReportName, ReportType, IncludedTestIDs, GeneratedAt)
+            VALUES (?, ?, ?, ?, ?, ?, GETDATE())
+        """, (
+            session['user_id'], 
+            patient_id, 
+            report_info['filepath'],
+            report_info['reportName'],
+            'FRT',  # Default report type
+            report_info['includedTestIds']
+        ))
+        
+        conn.commit()
+        
+        return jsonify({
+            'message': 'Report generated successfully',
+            'reportUrl': report_info['url']
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@frt_bp.route('/reports/download/<filename>')
+def download_report(filename):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    # Security check - verify the user has access to this report
+    filepath = os.path.join(REPORTS_DIR, filename)
+    
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'Report not found'}), 404
+    
+    # Send the file as attachment
+    return send_file(filepath, as_attachment=True)
+
+@frt_bp.route('/recommend-test', methods=['POST'])
+def recommend_test():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+        
+    data = request.json
+    patient_id = data.get('patientId')
+    
+    if not patient_id:
+        return jsonify({'error': 'Missing patient ID'}), 400
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Store recommendation in database
+        cursor.execute("""
+            INSERT INTO TestRecommendations (DoctorID, PatientID, RecommendedAt, Status)
+            VALUES (?, ?, GETDATE(), 'Pending')
+        """, (session['user_id'], patient_id))
+        
+        conn.commit()
+        
+        return jsonify({'message': 'Test recommendation sent successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()

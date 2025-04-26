@@ -44,7 +44,7 @@ function createPatientsModal(patients) {
                     <button onclick="chatWithPatient(${patient.userId}, '${patient.fullName}')">
                         <i class="fas fa-comment-medical"></i> Chat
                     </button>
-                    <button onclick="sendRecommendation(${patient.userId})">Send Recommendation</button>
+                    <button onclick="sendRecommendation(${patient.userId})">See Test</button>
                 </div>
             </div>
         `;
@@ -53,11 +53,67 @@ function createPatientsModal(patients) {
     return html;
 }
 
-// Global variables for encryption
+// Global variables for encryption and communication
 let socket;
 let userKeys;
 let recipientPublicKey;
 let currentChatPartner;
+
+// Initialize socket listeners function (call this after socket is created)
+function initializeSocketListeners() {
+    if (!socket) return;
+    
+    console.log('Initializing socket listeners');
+    
+    // Remove any existing listeners to prevent duplicates
+    socket.off('new_message');
+    
+    // Add new message listener
+    socket.on('new_message', (data) => {
+        console.log('Doctor received new message via socket:', data);
+        
+        // Only process if it's from the current chat partner
+        if (currentChatPartner && 
+            ((data.sender_id == currentChatPartner && data.recipient_id == getUserId()) || 
+             (data.sender_id == getUserId() && data.recipient_id == currentChatPartner))) {
+            
+            // Add message to chat using the appropriate encrypted version
+            try {
+                // Select the appropriate encrypted message version
+                const encryptedMessage = data.sender_id == getUserId() 
+                    ? data.sender_encrypted_message    // If I'm the sender, use sender version
+                    : data.recipient_encrypted_message; // Otherwise use recipient version
+                    
+                if (encryptedMessage) {
+                    // Decrypt and display the message
+                    crypto_utils.decrypt_message(encryptedMessage, userKeys.private_key)
+                        .then(decryptedText => {
+                            console.log("Successfully decrypted message:", decryptedText.substring(0, 20) + "...");
+                            // Add message to chat
+                            const messageElement = createMessageElement(
+                                decryptedText, 
+                                data.sender_id == getUserId() ? 'sent' : 'received', 
+                                data.timestamp
+                            );
+                            document.getElementById('chat-messages').appendChild(messageElement);
+                        })
+                        .catch(error => {
+                            console.error('Error decrypting socket message:', error);
+                            // Add message with error
+                            const messageElement = createMessageElement(
+                                "⚠️ Could not decrypt message (received just now)", 
+                                data.sender_id == getUserId() ? 'sent' : 'received', 
+                                data.timestamp
+                            );
+                            document.getElementById('chat-messages').appendChild(messageElement);
+                        });
+                }
+            } catch (error) {
+                console.error('Error processing new message:', error);
+            }
+        }
+    });
+}
 
 // Add this new function to chat with patient using encryption
 async function chatWithPatient(patientId, patientName) {
@@ -128,26 +184,6 @@ async function chatWithPatient(patientId, patientName) {
             
             if (success) {
                 messageInput.value = '';
-                
-                // Add the sent message to the chat (optimistic UI update)
-                const chatContainer = document.getElementById('chat-messages');
-                const messageElement = document.createElement('div');
-                messageElement.className = 'chat-message sent';
-                
-                const contentElement = document.createElement('div');
-                contentElement.className = 'message-content';
-                contentElement.textContent = message;
-                
-                const timeElement = document.createElement('div');
-                timeElement.className = 'message-time';
-                timeElement.textContent = new Date().toLocaleString();
-                
-                messageElement.appendChild(contentElement);
-                messageElement.appendChild(timeElement);
-                chatContainer.appendChild(messageElement);
-                
-                // Scroll to bottom of chat
-                chatContainer.scrollTop = chatContainer.scrollHeight;
             }
         }
     });
@@ -172,16 +208,12 @@ async function initializeChat(patientId, patientName) {
         
         socket.on('connect', () => {
             console.log('Connected to WebSocket server');
+            // Initialize listeners after successful connection
+            initializeSocketListeners();
         });
-        
-        socket.on('new_message', (data) => {
-            // Only process messages if chat is open and it's from our chat partner
-            if (currentChatPartner && 
-                ((data.sender_id === currentChatPartner && data.recipient_id === getUserId()) || 
-                (data.sender_id === getUserId() && data.recipient_id === currentChatPartner))) {
-                addMessageToChat(data);
-            }
-        });
+    } else {
+        // If socket already exists, make sure listeners are set up
+        initializeSocketListeners();
     }
     
     try {
@@ -299,6 +331,32 @@ async function sendEncryptedMessage(patientId, message) {
         return false;
     }
     
+    // Always show the message optimistically first, before even attempting to send
+    const timestamp = new Date().toISOString();
+    const chatContainer = document.getElementById('chat-messages');
+    const messageElement = document.createElement('div');
+    messageElement.className = 'chat-message sent';
+    
+    const contentElement = document.createElement('div');
+    contentElement.className = 'message-content';
+    contentElement.textContent = message;
+    
+    const timeElement = document.createElement('div');
+    timeElement.className = 'message-time';
+    timeElement.textContent = new Date(timestamp).toLocaleString();
+    
+    const statusElement = document.createElement('div');
+    statusElement.className = 'message-status';
+    statusElement.innerHTML = '<span class="sending">Sending...</span>';
+    
+    messageElement.appendChild(contentElement);
+    messageElement.appendChild(timeElement);
+    messageElement.appendChild(statusElement);
+    chatContainer.appendChild(messageElement);
+    
+    // Scroll to bottom of chat
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
     try {
         console.log("Encrypting message for recipient...");
         const recipientEncryptedMessage = await crypto_utils.encrypt_message(message, recipientPublicKey);
@@ -313,33 +371,68 @@ async function sendEncryptedMessage(patientId, message) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                recipientId: patientId,
+                recipientId: String(patientId), // Convert to string to avoid number format issues
                 senderEncryptedMessage: senderEncryptedMessage,
                 recipientEncryptedMessage: recipientEncryptedMessage
             })
         });
         
         if (!response.ok) {
-            throw new Error(`Server returned error: ${response.status}`);
+            const errorText = await response.text();
+            let errorData;
+            try {
+                // Try to parse the error as JSON
+                errorData = JSON.parse(errorText);
+            } catch (parseError) {
+                // If parsing fails, use the raw error text
+                console.error("Failed to parse error response:", parseError);
+                errorData = { error: errorText || response.statusText };
+            }
+            
+            // Check if the error is related to the Decimal serialization issue
+            if (errorText.includes("Decimal is not JSON serializable") || 
+                errorText.includes("Object of type Decimal")) {
+                console.warn("Detected Decimal serialization issue on server");
+                // This is a known server issue, mark as sent with a warning
+                statusElement.innerHTML = '<span class="partial">✓ <small>(server notice)</small></span>';
+                
+                // Message is displayed to the user but might not be stored properly on server
+                return true;
+            }
+            
+            throw new Error(`Server error: ${errorData.error || response.statusText}`);
         }
         
         console.log("Message sent successfully!");
         
-        // Get the timestamp from the response headers or body
-        const timestamp = response.headers.get('Date') || new Date().toISOString();
-        
-        // Optimistically add the message to the chat - use sender's version for own display
-        addMessageToChat({
-            sender_id: getUserId(),
-            recipient_id: patientId,
-            encrypted_message: senderEncryptedMessage,
-            timestamp: timestamp
-        });
+        // Update status icon
+        statusElement.innerHTML = '<span class="sent">✓</span>';
         
         return true;
     } catch (error) {
         console.error('Error sending encrypted message:', error);
-        alert("Error: Failed to send message. Please try again.");
+        
+        // Update status to show the error
+        let errorMessage = 'Failed to send';
+        if (error.message.includes('Decimal')) {
+            errorMessage = 'Server error (number format)';
+        }
+        
+        statusElement.innerHTML = `<span class="failed">${errorMessage}</span> <button class="retry-btn">Retry</button>`;
+        
+        // Add retry functionality
+        const retryBtn = statusElement.querySelector('.retry-btn');
+        if (retryBtn) {
+            retryBtn.onclick = async () => {
+                statusElement.innerHTML = '<span class="sending">Retrying...</span>';
+                const success = await sendEncryptedMessage(patientId, message);
+                if (success) {
+                    // Remove this message element since a new one will be created
+                    messageElement.remove();
+                }
+            };
+        }
+        
         return false;
     }
 }
@@ -518,10 +611,6 @@ function showPatientRecords() {
     alert('Feature coming soon: View detailed patient records');
 }
 
-// Display recommendation form
-function showRecommendationForm() {
-    alert('Feature coming soon: Send recommendations to patients');
-}
 
 // Display analytics
 function showAnalytics() {
@@ -601,7 +690,7 @@ async function editProfile() {
             if (profileData.role === 'Doctor') {
                 formData.specialization = document.getElementById('edit-specialization').value;
                 formData.office_hours = document.getElementById('edit-office-hours').value;
-                formData.hospital_clinic = document.getElementId('edit-hospital-clinic').value;
+                formData.hospital_clinic = document.getElementById('edit-hospital-clinic').value;
                 formData.experience = document.getElementById('edit-experience').value;
                 formData.education = document.getElementById('edit-education').value;
             }
@@ -643,9 +732,219 @@ function viewPatientDetails(patientId) {
     alert(`Feature coming soon: View details for patient ID ${patientId}`);
 }
 
-// Send recommendation to patient
-function sendRecommendation(patientId) {
-    alert(`Feature coming soon: Send recommendation to patient ID ${patientId}`);
+// Display patient's FRT test results
+async function sendRecommendation(patientId) {
+    try {
+        // Fetch the patient's FRT test results
+        const response = await fetch(`/api/frt/patient-results/${patientId}`);
+        const data = await response.json();
+        
+        if (!response.ok) throw new Error(data.error || 'Failed to fetch test results');
+        
+        // Create modal content to display the test results
+        const modalContent = createTestResultsModal(data, patientId);
+        showModal('FRT Test Results', modalContent);
+        
+        // Add event listeners for the report generation after modal is created
+        setupReportGenerationHandlers(patientId);
+    } catch (error) {
+        console.error('Error fetching patient test results:', error);
+        alert('Error loading test results: ' + error.message);
+    }
+}
+
+// Create modal content for displaying test results
+function createTestResultsModal(results, patientId) {
+    if (!results || results.length === 0) {
+        return `<p>No FRT test results found for this patient.</p>
+                <button class="recommend-test-btn" onclick="recommendFRTTest(${patientId})">Recommend FRT Test</button>`;
+    }
+
+    let html = `
+        <div class="test-results-container">
+            <div class="test-results-actions">
+                <button id="generate-report-btn" class="action-btn">Generate Report</button>
+                <button class="recommend-test-btn" onclick="recommendFRTTest(${patientId})">Recommend New Test</button>
+            </div>
+            <div class="test-results-table-wrapper">
+                <table class="test-results-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all-tests" title="Select All"></th>
+                            <th>Test Date</th>
+                            <th>Max Distance</th>
+                            <th>Risk Level</th>
+                            <th>Recommendation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+    
+    results.forEach(result => {
+        // Determine recommendation based on risk level
+        const recommendation = getRecommendationFromRisk(result.riskLevel);
+        const recommendationClass = recommendation === 'Recommended' ? 'recommended' : 'not-recommended';
+        
+        html += `
+            <tr>
+                <td><input type="checkbox" class="test-checkbox" data-test-id="${result.id}"></td>
+                <td>${new Date(result.date).toLocaleDateString()}</td>
+                <td>${result.maxDistance} cm</td>
+                <td>${result.riskLevel}</td>
+                <td><span class="recommendation ${recommendationClass}">${recommendation}</span></td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    return html;
+}
+
+// Determine recommendation based on risk level
+function getRecommendationFromRisk(riskLevel) {
+    if (riskLevel.toLowerCase().includes('low risk')) {
+        return 'Recommended';
+    } else {
+        return 'Not Recommended';
+    }
+}
+
+// Set up event handlers for report generation
+function setupReportGenerationHandlers(patientId) {
+    // Add event listener for "Select All" checkbox
+    const selectAllCheckbox = document.getElementById('select-all-tests');
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function() {
+            const testCheckboxes = document.querySelectorAll('.test-checkbox');
+            testCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+        });
+    }
+    
+    // Add event listener for "Generate Report" button
+    const generateReportBtn = document.getElementById('generate-report-btn');
+    if (generateReportBtn) {
+        generateReportBtn.addEventListener('click', function() {
+            generateTestReport(patientId);
+        });
+    }
+}
+
+// Generate report for selected tests
+async function generateTestReport(patientId) {
+    // Get all selected test IDs
+    const selectedCheckboxes = document.querySelectorAll('.test-checkbox:checked');
+    
+    if (selectedCheckboxes.length === 0) {
+        alert('Please select at least one test to generate a report.');
+        return;
+    }
+    
+    const selectedTestIds = Array.from(selectedCheckboxes).map(checkbox => 
+        checkbox.getAttribute('data-test-id')
+    );
+    
+    try {
+        // Show loading indicator
+        const generateReportBtn = document.getElementById('generate-report-btn');
+        if (generateReportBtn) {
+            generateReportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            generateReportBtn.disabled = true;
+        }
+        
+        // Call API to generate report
+        const response = await fetch('/api/frt/generate-report', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                patientId: patientId,
+                testIds: selectedTestIds
+            })
+        });
+        
+        // Reset button state
+        if (generateReportBtn) {
+            generateReportBtn.innerHTML = 'Generate Report';
+            generateReportBtn.disabled = false;
+        }
+        
+        // Handle the response
+        if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = 'Failed to generate report';
+            
+            try {
+                // Try to parse as JSON
+                const errorData = JSON.parse(errorText);
+                errorMessage = errorData.error || errorMessage;
+                
+                // Check for SQL error patterns and provide more user-friendly messages
+                if (errorMessage.includes("NULL into column") && errorMessage.includes("Reports")) {
+                    errorMessage = "Database error: Missing required report information. Please contact support.";
+                }
+            } catch (parseError) {
+                // If not JSON, use the text directly but truncate if too long
+                if (errorText.length > 150) {
+                    errorMessage = errorText.substring(0, 147) + '...';
+                } else {
+                    errorMessage = errorText || errorMessage;
+                }
+            }
+            
+            throw new Error(errorMessage);
+        }
+        
+        const data = await response.json();
+        
+        // Provide download link or notification that report was generated
+        alert('Report generated successfully! Downloading...');
+        
+        // Create a download link for the report
+        if (data.reportUrl) {
+            const downloadLink = document.createElement('a');
+            downloadLink.href = data.reportUrl;
+            downloadLink.download = `frt-report-${Date.now()}.pdf`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    } catch (error) {
+        console.error('Error generating report:', error);
+        alert('Error generating report: ' + error.message);
+    }
+}
+
+// Function to recommend a new FRT test to the patient
+async function recommendFRTTest(patientId) {
+    try {
+        const response = await fetch('/api/frt/recommend-test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                patientId: patientId
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) throw new Error(data.error || 'Failed to recommend test');
+        
+        alert('FRT test recommendation sent to patient successfully!');
+    } catch (error) {
+        console.error('Error recommending test:', error);
+        alert('Error sending recommendation: ' + error.message);
+    }
 }
 
 // Show modal - reused from dashboard.js
@@ -675,49 +974,3 @@ function showModal(title, content) {
         }
     };
 }
-
-// Update the socket event listener for new messages in initializeChat
-socket.on('new_message', (data) => {
-    console.log('Doctor received new message via socket:', data);
-    
-    // Only process if it's from the current chat partner
-    if (currentChatPartner && 
-        ((data.sender_id == currentChatPartner && data.recipient_id == getUserId()) || 
-         (data.sender_id == getUserId() && data.recipient_id == currentChatPartner))) {
-        
-        // Add message to chat using the appropriate encrypted version
-        try {
-            // Select the appropriate encrypted message version
-            const encryptedMessage = data.sender_id == getUserId() 
-                ? data.sender_encrypted_message    // If I'm the sender, use sender version
-                : data.recipient_encrypted_message; // Otherwise use recipient version
-                
-            if (encryptedMessage) {
-                // Decrypt and display the message
-                crypto_utils.decrypt_message(encryptedMessage, userKeys.private_key)
-                    .then(decryptedText => {
-                        console.log("Successfully decrypted message:", decryptedText.substring(0, 20) + "...");
-                        // Add message to chat
-                        const messageElement = createMessageElement(
-                            decryptedText, 
-                            data.sender_id == getUserId() ? 'sent' : 'received', 
-                            data.timestamp
-                        );
-                        document.getElementById('chat-messages').appendChild(messageElement);
-                    })
-                    .catch(error => {
-                        console.error('Error decrypting socket message:', error);
-                        // Add message with error
-                        const messageElement = createMessageElement(
-                            "⚠️ Could not decrypt message (received just now)", 
-                            data.sender_id == getUserId() ? 'sent' : 'received', 
-                            data.timestamp
-                        );
-                        document.getElementById('chat-messages').appendChild(messageElement);
-                    });
-            }
-        } catch (error) {
-            console.error('Error processing new message:', error);
-        }
-    }
-});

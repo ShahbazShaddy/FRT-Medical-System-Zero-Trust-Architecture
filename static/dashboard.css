@@ -438,3 +438,151 @@ body {
 .typing-status {
     font-style: italic;
 }
+
+/* Add these styles for message status indicators if not already added */
+.message-status {
+    font-size: 0.7rem;
+    margin-top: 2px;
+    text-align: right;
+}
+
+.message-status .sending {
+    color: #888;
+    font-style: italic;
+}
+
+.message-status .sent {
+    color: #4CAF50;
+}
+
+.message-status .failed {
+    color: #F44336;
+}
+
+.retry-btn {
+    background: none;
+    border: none;
+    color: #2196F3;
+    cursor: pointer;
+    font-size: 0.7rem;
+    text-decoration: underline;
+    padding: 0;
+    margin-left: 5px;
+}
+
+.retry-btn:hover {
+    color: #0b7dda;
+}
+
+/* Add this CSS class for partial success messages */
+.message-status .partial {
+    color: #FF9800; /* Orange warning color */
+}
+
+.message-status .partial small {
+    font-size: 0.7em;
+    opacity: 0.8;
+}
+
+/* Debug UI elements */
+.debug-info {
+    font-family: monospace;
+    font-size: 0.8rem;
+    padding: 5px;
+    margin-top: 5px;
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+    word-break: break-all;
+    max-height: 100px;
+    overflow-y: auto;
+}
+
+/* Test Results Styles */
+.test-results-container {
+    width: 100%;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.test-results-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.test-results-table-wrapper {
+    overflow-y: auto;
+    max-height: 60vh;
+    border-radius: 5px;
+}
+
+.test-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.test-results-table th,
+.test-results-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.test-results-table th {
+    background-color: #f5f5f5;
+    position: sticky;
+    top: 0;
+}
+
+.test-results-table tr:hover {
+    background-color: #f9f9f9;
+}
+
+.action-btn, .recommend-test-btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+
+.action-btn {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.action-btn:hover {
+    background-color: #45a049;
+}
+
+.recommend-test-btn {
+    background-color: #2196F3;
+    color: white;
+}
+
+.recommend-test-btn:hover {
+    background-color: #0b7dda;
+}
+
+.recommendation {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.recommended {
+    background-color: #c8e6c9;
+    color: #2e7d32;
+}
+
+.not-recommended {
+    background-color: #ffcdd2;
+    color: #c62828;
+}

@@ -61,3 +61,4 @@ config.json
 flask_session
 model_cache
 email_config.py
+generated_reports

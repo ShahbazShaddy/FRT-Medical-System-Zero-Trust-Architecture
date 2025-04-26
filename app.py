@@ -53,12 +53,18 @@ def init_app_route():
         return jsonify({'message': 'Application initialized successfully'}), 200
     return jsonify({'error': 'Not authorized'}), 401
 
-# Add a compatibility route for existing frontend
+# Add compatibility routes for existing frontend
 @app.route('/chat', methods=['POST'])
 def chat_legacy():
     """Legacy route that forwards to the new chatbot endpoint"""
     from routes.chat_routes import chat_with_bot
     return chat_with_bot()
+
+@app.route('/api/doctor-info')
+def doctor_info_legacy():
+    """Legacy route that forwards to the new doctor info endpoint"""
+    from routes.doctor_routes import get_doctor_info
+    return get_doctor_info()
 
 # WebSocket event handlers
 @socketio.on('connect')
