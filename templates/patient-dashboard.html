@@ -12,64 +12,274 @@
     <!-- Add crypto utilities -->
     <script src="{{ url_for('static', filename='crypto-utils.js') }}"></script>
 </head>
-<body data-user-id="{{ session['user_id'] }}">
+<body data-user-id="{{ session['user_id'] }}" class="sidebar-closed">
     <div class="dashboard-container">
         <nav class="dashboard-nav">
-            <div class="nav-header">
-                <h2>FRT Healthcare</h2>
-                <p>Welcome, {{ session['full_name'] }}</p>
+            <div class="nav-left"> <!-- Group logo and toggle -->
+                <button id="sidebar-toggle" class="sidebar-toggle-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="nav-header">
+                    <h2>FRT Healthcare</h2>
+                    
+                </div>
             </div>
-            <a href="/auth/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            <button id="logout-btn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </nav>
 
-        <div class="dashboard-content">
-            <div class="dashboard-grid">
-                <!-- FRT Performer Card -->
-                <div class="dashboard-card" onclick="window.location.href='/chat'">
-                    <i class="fas fa-robot"></i>
-                    <h3>FRT Performer</h3>
-                    <p>Start your Functional Rating Test with our AI assistant</p>
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <a href="#" class="sidebar-link" onclick="navigateToChat(event)" data-title="FRT Performer">
+                    <i class="fas fa-robot"></i><span>FRT Performer</span>
+                </a>
+                <a href="#" class="sidebar-link" onclick="showResults(event)" data-title="Assessment Results">
+                    <i class="fas fa-chart-line"></i><span>Assessment Results</span>
+                </a>
+                <a href="#" class="sidebar-link" onclick="showHistory(event)" data-title="Test History">
+                    <i class="fas fa-history"></i><span>Test History</span>
+                </a>
+                <a href="#" class="sidebar-link" onclick="manageDoctorAssociation(event)" data-title="My Doctor">
+                    <i class="fas fa-user-md"></i><span>My Doctor</span>
+                </a>
+                <a href="#" class="sidebar-link" onclick="editProfile(event)" data-title="Edit Profile">
+                    <i class="fas fa-user-edit"></i><span>Edit Profile</span>
+                </a>
+                <a href="#" class="sidebar-link" onclick="showFAQs(event)" data-title="Help & FAQs">
+                    <i class="fas fa-question-circle"></i><span>Help & FAQs</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <!-- Add dashboard header with stats -->
+            <div class="dashboard-header">
+                <div class="welcome-section">
+                    <div class="welcome-text">
+                        <h2>Welcome back, {{ session['full_name'] }}</h2>
+                        <p>Here's what's happening with your health today</p>
+                    </div>
+                    <div class="date-time">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-date-time">Loading...</span>
+                    </div>
                 </div>
-
-                <!-- Assessment Results Card -->
-                <div class="dashboard-card" onclick="showResults()">
-                    <i class="fas fa-chart-line"></i>
-                    <h3>Assessment Results</h3>
-                    <p>View your AI-generated assessment results and risk analysis</p>
-                </div>
-
-                <!-- Test History Card -->
-                <div class="dashboard-card" onclick="showHistory()">
-                    <i class="fas fa-history"></i>
-                    <h3>Test History</h3>
-                    <p>Track your progress and view past test results</p>
-                </div>
-
-
-
-                <!-- Doctor Association Card -->
-                <div class="dashboard-card" onclick="manageDoctorAssociation()">
-                    <i class="fas fa-user-md"></i>
-                    <h3>My Doctor</h3>
-                    <p>Manage your association with a healthcare provider</p>
-                </div>
-
-                <!-- Edit Profile Card - NEW CARD -->
-                <div class="dashboard-card" onclick="editProfile()">
-                    <i class="fas fa-user-edit"></i>
-                    <h3>Edit Profile</h3>
-                    <p>Update your personal information and settings</p>
-                </div>
-
-                <!-- Help & FAQs Card -->
-                <div class="dashboard-card" onclick="showFAQs()">
-                    <i class="fas fa-question-circle"></i>
-                    <h3>Help & FAQs</h3>
-                    <p>Access help resources and frequently asked questions</p>
+                
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <i class="fas fa-heartbeat stat-icon"></i>
+                        <div class="stat-title">Last Assessment</div>
+                        <div class="stat-value" id="last-assessment">--</div>
+                        <div class="stat-change" id="assessment-status">Loading data...</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <i class="fas fa-history stat-icon"></i>
+                        <div class="stat-title">Tests Completed</div>
+                        <div class="stat-value" id="tests-completed">--</div>
+                        <div class="stat-change" id="tests-change">Loading data...</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <i class="fas fa-ruler-horizontal stat-icon"></i>
+                        <div class="stat-title">Avg. Reach Distance</div>
+                        <div class="stat-value" id="avg-distance">--</div>
+                        <div class="stat-change" id="distance-change">Loading data...</div>
+                    </div>
                 </div>
             </div>
-        </div>
+            
+            <!-- Add breadcrumb navigation -->
+            <div class="breadcrumb">
+                <a href="/dashboard">Dashboard</a>
+                <span class="breadcrumb-separator">/</span>
+                <span class="current">Overview</span>
+            </div>
+
+            <div class="dashboard-content">
+                <!-- Wrap grid in a section card -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h3 class="section-title">Quick Actions</h3>
+                        <div class="section-actions">
+                            <button id="refresh-dashboard">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dashboard-grid">
+                        <!-- FRT Performer Card -->
+                        <div class="dashboard-card" onclick="window.location.href='/chat'">
+                            <i class="fas fa-robot"></i>
+                            <h3>FRT Performer</h3>
+                            <p>Start your Functional Rating Test with our AI assistant</p>
+                        </div>
+
+                        <!-- Assessment Results Card -->
+                        <div class="dashboard-card" onclick="showResults()">
+                            <i class="fas fa-chart-line"></i>
+                            <h3>Assessment Results</h3>
+                            <p>View your AI-generated assessment results and risk analysis</p>
+                        </div>
+
+                        <!-- Test History Card -->
+                        <div class="dashboard-card" onclick="showHistory()">
+                            <i class="fas fa-history"></i>
+                            <h3>Test History</h3>
+                            <p>Track your progress and view past test results</p>
+                        </div>
+
+                        <!-- Doctor Association Card -->
+                        <div class="dashboard-card" onclick="manageDoctorAssociation()">
+                            <i class="fas fa-user-md"></i>
+                            <h3>My Doctor</h3>
+                            <p>Manage your association with a healthcare provider</p>
+                        </div>
+
+                        <!-- Edit Profile Card - NEW CARD -->
+                        <div class="dashboard-card" onclick="editProfile()">
+                            <i class="fas fa-user-edit"></i>
+                            <h3>Edit Profile</h3>
+                            <p>Update your personal information and settings</p>
+                        </div>
+
+                        <!-- Help & FAQs Card -->
+                        <div class="dashboard-card" onclick="showFAQs()">
+                            <i class="fas fa-question-circle"></i>
+                            <h3>Help & FAQs</h3>
+                            <p>Access help resources and frequently asked questions</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
+    
     <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+    <!-- Add date-time script -->
+    <script>
+        // Update current date and time
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('current-date-time').textContent = now.toLocaleDateString('en-US', options);
+        }
+        
+        // Update stats with sample data (replace with actual API calls)
+        function updateStats() {
+            // Update stats with actual data from API
+            fetch('/api/patient/dashboard-stats')
+                .then(response => response.json())
+                .then(data => {
+                    // Last assessment date
+                    if (data.lastAssessment) {
+                        document.getElementById('last-assessment').textContent = data.lastAssessment.date || "--";
+                        document.getElementById('assessment-status').textContent = data.lastAssessment.status || "No data";
+                        // Add color class based on status
+                        if (data.lastAssessment.status === 'Normal') {
+                            document.getElementById('assessment-status').className = 'stat-change positive';
+                        } else if (data.lastAssessment.status === 'Not Recommended') {
+                            document.getElementById('assessment-status').className = 'stat-change negative';
+                        } else {
+                            document.getElementById('assessment-status').className = 'stat-change';
+                        }
+                    }
+                    
+                    // Tests completed
+                    document.getElementById('tests-completed').textContent = data.testsCompleted?.count || "0";
+                    
+                    // Set change text and class
+                    if (data.testsCompleted?.change) {
+                        const changeText = data.testsCompleted.change > 0 ? 
+                            `+${data.testsCompleted.change} from last month` : 
+                            `${data.testsCompleted.change} from last month`;
+                        document.getElementById('tests-change').textContent = changeText;
+                        
+                        // Add appropriate class
+                        document.getElementById('tests-change').className = 
+                            data.testsCompleted.change >= 0 ? 'stat-change positive' : 'stat-change negative';
+                    } else {
+                        document.getElementById('tests-change').textContent = 'No previous data';
+                        document.getElementById('tests-change').className = 'stat-change';
+                    }
+                    
+                    // Average distance
+                    if (data.avgDistance?.value) {
+                        document.getElementById('avg-distance').textContent = `${data.avgDistance.value} cm`;
+                        
+                        if (data.avgDistance.change) {
+                            const distChangeText = data.avgDistance.change > 0 ? 
+                                `+${data.avgDistance.change} cm` : 
+                                `${data.avgDistance.change} cm`;
+                            document.getElementById('distance-change').textContent = distChangeText;
+                            
+                            // Add appropriate class
+                            document.getElementById('distance-change').className = 
+                                data.avgDistance.change >= 0 ? 'stat-change positive' : 'stat-change negative';
+                        } else {
+                            document.getElementById('distance-change').textContent = 'First measurement';
+                            document.getElementById('distance-change').className = 'stat-change';
+                        }
+                    } else {
+                        document.getElementById('avg-distance').textContent = "--";
+                        document.getElementById('distance-change').textContent = 'No data available';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading dashboard stats:', error);
+                    // Set fallback values if API fails
+                    document.getElementById('last-assessment').textContent = "--";
+                    document.getElementById('assessment-status').textContent = "Error loading data";
+                    document.getElementById('tests-completed').textContent = "--";
+                    document.getElementById('tests-change').textContent = "Error loading data";
+                    document.getElementById('avg-distance').textContent = "--";
+                    document.getElementById('distance-change').textContent = "Error loading data";
+                });
+        }
+        
+        // Run on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDateTime();
+            setInterval(updateDateTime, 60000); // Update every minute
+            
+            // Update stats
+            updateStats();
+            
+            // Set up refresh button
+            document.getElementById('refresh-dashboard').addEventListener('click', function() {
+                this.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing...';
+                updateStats();
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+                }, 1000);
+            });
+            
+            // Set up logout functionality
+            document.getElementById('logout-btn').addEventListener('click', async function() {
+                try {
+                    const response = await fetch('/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        window.location.href = '/login'; // Redirect to login page
+                    } else {
+                        console.error('Logout failed');
+                    }
+                } catch (error) {
+                    console.error('Error during logout:', error);
+                }
+            });
+        });
+    </script>
 </body>
 </html>

@@ -1,4 +1,5 @@
-async function showResults() {
+async function showResults(event) {
+    if (event) event.preventDefault(); // Prevent default if called from link
     try {
         const response = await fetch('/api/frt/latest-report');
         const data = await response.json();
@@ -41,7 +42,8 @@ async function showResults() {
     }
 }
 
-async function showHistory() {
+async function showHistory(event) {
+    if (event) event.preventDefault();
     try {
         const response = await fetch('/api/frt/history');
         const data = await response.json();
@@ -55,7 +57,8 @@ async function showHistory() {
     }
 }
 
-function showFAQs() {
+function showFAQs(event) {
+    if (event) event.preventDefault();
     window.location.href = '/faqs';
 }
 
@@ -164,7 +167,8 @@ function showModal(title, content) {
     }, 100);
 }
 
-async function manageDoctorAssociation() {
+async function manageDoctorAssociation(event) {
+    if (event) event.preventDefault();
     try {
         // Fetch current association status
         const response = await fetch('/api/patient/doctor-association');
@@ -582,7 +586,8 @@ async function removeDoctorAssociation() {
 }
 
 // Function to edit profile (for patient dashboard)
-async function editProfile() {
+async function editProfile(event) {
+    if (event) event.preventDefault();
     try {
         // Fetch current profile data
         const response = await fetch('/api/profile');
@@ -1360,4 +1365,89 @@ function formatFileSize(bytes) {
     else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
     else if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
     else return (bytes / 1073741824).toFixed(1) + ' GB';
+}
+
+// --- Sidebar Toggle Functionality ---
+document.addEventListener('DOMContentLoaded', () => {
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const body = document.body;
+    const sidebarLinks = document.querySelectorAll('.sidebar-link');
+
+    // Function to toggle sidebar state
+    const toggleSidebar = () => {
+        body.classList.toggle('sidebar-closed');
+        // Store state in localStorage
+        if (body.classList.contains('sidebar-closed')) {
+            localStorage.setItem('sidebarState', 'closed');
+        } else {
+            localStorage.setItem('sidebarState', 'open');
+        }
+    };
+
+    // Check localStorage for saved state
+    const savedState = localStorage.getItem('sidebarState');
+    // Apply initial state based on localStorage or default (closed on mobile)
+    if (savedState === 'open' && window.innerWidth > 768) {
+         body.classList.remove('sidebar-closed');
+    } else if (savedState === 'closed') {
+         body.classList.add('sidebar-closed');
+    } else if (window.innerWidth <= 768) {
+        // Default to closed on smaller screens if no state saved
+        body.classList.add('sidebar-closed');
+    } else {
+        // Default to open on larger screens if no state saved
+        body.classList.remove('sidebar-closed');
+    }
+
+
+    if (sidebarToggle) {
+        sidebarToggle.addEventListener('click', toggleSidebar);
+    }
+
+    // --- Active Sidebar Link Handling ---
+    const setActiveLink = () => {
+        const currentPath = window.location.pathname;
+        sidebarLinks.forEach(link => {
+            link.classList.remove('active');
+            // Basic matching - adjust if more complex routing is used
+            const linkPath = link.getAttribute('onclick'); // Use onclick content for matching
+            if (linkPath) {
+                 if (currentPath === '/chat' && linkPath.includes('navigateToChat')) {
+                    link.classList.add('active');
+                } else if (currentPath === '/faqs' && linkPath.includes('showFAQs')) {
+                    link.classList.add('active');
+                }
+                // Add more conditions for other sections if they have dedicated URLs
+                // Or match based on which modal is typically opened by the link
+            }
+        });
+        // Special case for modals opened from dashboard
+        // This requires knowing which function opens which modal
+        // Example: If showHistory() is called, highlight the history link
+        // This part might need refinement based on how modals are tracked
+    };
+
+    // Set active link on page load
+    setActiveLink();
+
+    // Add event listeners to links to set active state (and potentially close sidebar on mobile)
+    sidebarLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            // Remove active class from all links
+            sidebarLinks.forEach(el => el.classList.remove('active'));
+            // Add active class to the clicked link
+            e.currentTarget.classList.add('active');
+
+            // Optional: Close sidebar on link click on smaller screens
+            if (window.innerWidth <= 768 && !body.classList.contains('sidebar-closed')) {
+                // toggleSidebar(); // Uncomment if you want auto-close
+            }
+        });
+    });
+});
+
+// Helper function to navigate to chat (used by sidebar link)
+function navigateToChat(event) {
+    event.preventDefault(); // Prevent default link behavior
+    window.location.href = '/chat';
 }

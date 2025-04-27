@@ -70,6 +70,83 @@ def doctor_info_legacy():
 def faqs():
     return render_template('faqs.html')
 
+# Add dashboard statistics endpoint
+@app.route('/api/patient/dashboard-stats')
+def get_dashboard_stats():
+    """API endpoint to get dashboard statistics data for the patient dashboard"""
+    from datetime import datetime
+    import sqlite3
+    
+    try:
+        if 'user_id' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+            
+        user_id = session.get('user_id')
+        
+        # Connect to the database
+        conn = sqlite3.connect('instance/database.db')
+        conn.row_factory = sqlite3.Row
+        db = conn.cursor()
+        
+        # Get the last assessment data
+        last_assessment_query = """
+            SELECT date, risk_level FROM FunctionalReachTests 
+            WHERE patient_id = ? ORDER BY date DESC LIMIT 1
+        """
+        last_assessment = db.execute(last_assessment_query, (user_id,)).fetchone()
+        
+        # Get tests count
+        tests_count_query = """
+            SELECT COUNT(*) as count FROM FunctionalReachTests 
+            WHERE patient_id = ?
+        """
+        tests_count = db.execute(tests_count_query, (user_id,)).fetchone()
+        total_count = tests_count['count'] if tests_count else 0
+        
+        # Get current month vs previous month comparison
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        
+        # Format response data with user-friendly empty states
+        response_data = {
+            'lastAssessment': {
+                'date': last_assessment['date'] if last_assessment else "No tests yet",
+                'status': last_assessment['risk_level'] if last_assessment else "No data"
+            },
+            'testsCompleted': {
+                'count': total_count,
+                'change': None  # We'll leave this null for now
+            },
+            'avgDistance': {
+                'value': None,
+                'change': None
+            }
+        }
+        
+        # Only calculate average distance if there are tests
+        if total_count > 0:
+            # Get average distance
+            avg_distance_query = """
+                SELECT AVG(max_distance) as avg_distance FROM FunctionalReachTests 
+                WHERE patient_id = ? AND max_distance > 0
+            """
+            avg_distance = db.execute(avg_distance_query, (user_id,)).fetchone()
+            
+            if avg_distance and avg_distance['avg_distance']:
+                response_data['avgDistance']['value'] = round(avg_distance['avg_distance'], 1)
+        
+        conn.close()
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"Error getting dashboard stats: {e}")
+        # Return empty data with appropriate messages instead of error
+        return jsonify({
+            'lastAssessment': {'date': "No tests yet", 'status': "No records found"},
+            'testsCompleted': {'count': 0, 'change': None},
+            'avgDistance': {'value': None, 'change': None}
+        })
+
 # WebSocket event handlers
 @socketio.on('connect')
 def handle_connect():
