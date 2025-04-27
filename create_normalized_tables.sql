@@ -60,6 +60,9 @@ CREATE TABLE ChatMessages (
     IsRead BIT DEFAULT 0,
     SenderEncryptedMessage NVARCHAR(MAX) NULL,
     RecipientEncryptedMessage NVARCHAR(MAX) NULL,
+    SenderEncryptedFile VARBINARY(MAX) NULL,
+    RecipientEncryptedFile VARBINARY(MAX) NULL,
+    FileMetadata NVARCHAR(MAX) NULL,  -- Store filename, type, size as JSON
     FOREIGN KEY (SenderID) REFERENCES Users(UserID),
     FOREIGN KEY (RecipientID) REFERENCES Users(UserID)
 );

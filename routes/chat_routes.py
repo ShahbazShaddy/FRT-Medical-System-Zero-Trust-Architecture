@@ -1,8 +1,12 @@
-from flask import Blueprint, jsonify, session, request
+from flask import Blueprint, jsonify, session, request, make_response
 from database import get_db_connection
 import traceback
 import chatbot
 from flask_socketio import emit, join_room
+import json
+import base64
+from flask import make_response, send_file
+from io import BytesIO
 
 chat_bp = Blueprint('chat', __name__, url_prefix='/api/chat')
 
@@ -75,13 +79,39 @@ def send_message():
     recipient_id = data.get('recipientId')
     sender_encrypted_message = data.get('senderEncryptedMessage')
     recipient_encrypted_message = data.get('recipientEncryptedMessage')
+    sender_encrypted_file = data.get('senderEncryptedFile')
+    recipient_encrypted_file = data.get('recipientEncryptedFile')
+    file_metadata = data.get('fileMetadata')
     
-    if not recipient_id or not sender_encrypted_message or not recipient_encrypted_message:
-        return jsonify({'error': 'Recipient ID and both encrypted messages are required'}), 400
+    # Check for required fields - either message or file must be present
+    if not recipient_id:
+        return jsonify({'error': 'Recipient ID is required'}), 400
+        
+    if not ((sender_encrypted_message and recipient_encrypted_message) or 
+           (sender_encrypted_file and recipient_encrypted_file)):
+        return jsonify({'error': 'Either encrypted messages or files are required'}), 400
     
     sender_id = session['user_id']
     sender_role = session['role']
     print(f"Received message from {sender_id} ({sender_role}) to {recipient_id}")
+    
+    # Convert strings to appropriate types
+    try:
+        recipient_id = int(recipient_id)
+    except ValueError:
+        return jsonify({'error': 'Invalid recipient ID format'}), 400
+    
+    # Convert base64 file data to binary if present
+    binary_sender_file = None
+    binary_recipient_file = None
+    
+    if sender_encrypted_file and recipient_encrypted_file:
+        try:
+            binary_sender_file = base64.b64decode(sender_encrypted_file)
+            binary_recipient_file = base64.b64decode(recipient_encrypted_file)
+        except Exception as e:
+            print(f"Error decoding file data: {str(e)}")
+            return jsonify({'error': 'Invalid file data format'}), 400
     
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -117,9 +147,13 @@ def send_message():
         
         # Insert the encrypted messages
         cursor.execute("""
-            INSERT INTO ChatMessages (SenderID, RecipientID, Message, SenderEncryptedMessage, RecipientEncryptedMessage)
-            VALUES (?, ?, ?, ?, ?)
-        """, (sender_id, recipient_id, "Encrypted message", sender_encrypted_message, recipient_encrypted_message))
+            INSERT INTO ChatMessages (SenderID, RecipientID, Message, 
+                                     SenderEncryptedMessage, RecipientEncryptedMessage,
+                                     SenderEncryptedFile, RecipientEncryptedFile, FileMetadata)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (sender_id, recipient_id, "Encrypted message", 
+             sender_encrypted_message, recipient_encrypted_message,
+             binary_sender_file, binary_recipient_file, file_metadata))
         
         # Get the ID and timestamp of the new message
         cursor.execute("SELECT @@IDENTITY, GETDATE()")
@@ -128,26 +162,34 @@ def send_message():
         timestamp = message_data[1].strftime("%Y-%m-%d %H:%M:%S")
         
         conn.commit()
-        print(f"Dual-encrypted message saved to database successfully with ID {message_id}")
+        print(f"Encrypted message/file saved to database with ID {message_id}")
         
         # Emit a socket event to the recipient
         if socketio:
-            socketio.emit('new_message', {
+            event_data = {
                 'message_id': message_id,
                 'sender_id': sender_id,
                 'recipient_id': recipient_id,
-                'sender_encrypted_message': sender_encrypted_message,
-                'recipient_encrypted_message': recipient_encrypted_message,
                 'timestamp': timestamp,
                 'is_from_doctor': sender_role == 'Doctor'
-            }, room=f"user_{recipient_id}")
+            }
             
+            # Add message data if present
+            if sender_encrypted_message and recipient_encrypted_message:
+                event_data['sender_encrypted_message'] = sender_encrypted_message
+                event_data['recipient_encrypted_message'] = recipient_encrypted_message
+            
+            # Add file metadata if present
+            if file_metadata:
+                event_data['file_metadata'] = file_metadata
+                event_data['has_file'] = True
+            
+            socketio.emit('new_message', event_data, room=f"user_{recipient_id}")
             print(f"Socket event emitted to room user_{recipient_id}")
         
-        return jsonify({'message': 'Message sent successfully'}), 200
+        return jsonify({'message': 'Message sent successfully', 'message_id': message_id}), 200
     except Exception as e:
         conn.rollback()
-        traceback.print_exc()  # More detailed error logging
         print(f"Error in send_message: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
@@ -224,3 +266,64 @@ def reset_conversation():
         user_id = session['user_id']
         chatbot.reset_conversation(user_id)
     return jsonify({'status': 'success'})
+
+# Add a new route to download files
+@chat_bp.route('/file/<int:message_id>', methods=['GET'])
+def get_file(message_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    user_id = session['user_id']
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get the file data based on who's requesting
+        cursor.execute("""
+            SELECT SenderID, RecipientID, SenderEncryptedFile, RecipientEncryptedFile, FileMetadata
+            FROM ChatMessages
+            WHERE MessageID = ?
+        """, (message_id,))
+        
+        message = cursor.fetchone()
+        
+        if not message:
+            return jsonify({'error': 'File not found'}), 404
+            
+        sender_id, recipient_id, sender_file, recipient_file, file_metadata = message
+        
+        # Check if user is permitted to download this file
+        if user_id != sender_id and user_id != recipient_id:
+            return jsonify({'error': 'Unauthorized access to file'}), 403
+            
+        # Choose the right file version based on who's downloading
+        file_data = sender_file if user_id == sender_id else recipient_file
+        
+        if not file_data:
+            return jsonify({'error': 'No file attached to this message'}), 404
+            
+        # Parse file metadata to get filename and content type
+        if not file_metadata:
+            filename = f"file_{message_id}"
+            content_type = "application/octet-stream"
+        else:
+            try:
+                metadata = json.loads(file_metadata)
+                filename = metadata.get('filename', f"file_{message_id}")
+                content_type = metadata.get('type', "application/octet-stream")
+            except:
+                filename = f"file_{message_id}"
+                content_type = "application/octet-stream"
+                
+        # Create response with file data
+        response = make_response(file_data)
+        response.headers.set('Content-Type', content_type)
+        response.headers.set('Content-Disposition', f'attachment; filename="{filename}"')
+        return response
+        
+    except Exception as e:
+        print(f"Error retrieving file: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()

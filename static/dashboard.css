@@ -148,20 +148,57 @@ body {
 }
 
 .conversation-log {
-    max-height: 200px;
+    max-height: 100px; /* Limit initial height */
     overflow-y: auto;
     padding: 10px;
     background: #fff;
+    border: 1px solid #eee; /* Add border */
     border-radius: 4px;
     margin-top: 5px;
     font-size: 0.9em;
+    transition: max-height 0.3s ease-in-out; /* Smooth transition */
 }
 
-.conversation-log p {
-    margin: 5px 0;
-    padding: 5px;
-    border-bottom: 1px solid #eee;
+.conversation-log.expanded {
+    max-height: 300px; /* Allow more height when expanded */
 }
+
+.conversation-log-content p {
+    margin: 5px 0;
+    padding: 3px 0;
+    border-bottom: 1px dashed #eee;
+    line-height: 1.4;
+}
+.conversation-log-content p:last-child {
+    border-bottom: none;
+}
+
+.user-message strong {
+    color: #0056b3; /* Style user messages */
+}
+
+.assistant-message {
+    color: #5a5a5a; /* Style assistant messages */
+}
+
+
+.toggle-conversation {
+    background: none;
+    border: 1px solid #007bff;
+    color: #007bff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-top: 10px;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.toggle-conversation:hover {
+    background-color: #007bff;
+    color: white;
+}
+
 
 .history-date {
     color: #666;
@@ -254,8 +291,12 @@ body {
 
 .error-message {
     color: #dc3545;
-    font-weight: bold;
-    margin-top: 10px;
+    padding: 15px;
+    text-align: center;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    margin: 10px 0;
 }
 
 .success-message {
@@ -439,7 +480,54 @@ body {
     font-style: italic;
 }
 
-/* Add these styles for message status indicators if not already added */
+/* File attachment styles */
+.file-attachment {
+    display: flex;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.05);
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.file-attachment i {
+    margin-right: 8px;
+}
+
+.download-file {
+    margin-left: auto;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.download-file:hover {
+    background-color: #0056b3;
+}
+
+.message-text {
+    margin-top: 8px;
+}
+
+#cancel-file {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    margin-left: 8px;
+    padding: 0 8px;
+    cursor: pointer;
+}
+
+#cancel-file:hover {
+    background-color: #bd2130;
+}
+
 .message-status {
     font-size: 0.7rem;
     margin-top: 2px;
@@ -448,141 +536,165 @@ body {
 
 .message-status .sending {
     color: #888;
-    font-style: italic;
 }
 
 .message-status .sent {
-    color: #4CAF50;
+    color: #28a745;
 }
 
 .message-status .failed {
-    color: #F44336;
+    color: #dc3545;
 }
 
-.retry-btn {
+.message-status .partial {
+    color: #ffc107;
+}
+
+.message-status .retry-btn {
     background: none;
     border: none;
-    color: #2196F3;
-    cursor: pointer;
-    font-size: 0.7rem;
-    text-decoration: underline;
+    color: #007bff;
     padding: 0;
-    margin-left: 5px;
+    font-size: 0.7rem;
+    cursor: pointer;
+    text-decoration: underline;
 }
 
-.retry-btn:hover {
-    color: #0b7dda;
+.report-container {
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* Add this CSS class for partial success messages */
-.message-status .partial {
-    color: #FF9800; /* Orange warning color */
+.report-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
 }
 
-.message-status .partial small {
-    font-size: 0.7em;
-    opacity: 0.8;
+.report-date, .report-doctor {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 5px 0;
 }
 
-/* Debug UI elements */
-.debug-info {
-    font-family: monospace;
-    font-size: 0.8rem;
-    padding: 5px;
-    margin-top: 5px;
-    background-color: #f8f8f8;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    word-break: break-all;
-    max-height: 100px;
-    overflow-y: auto;
+.download-report {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    background: #007bff;
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+    margin: 10px 0;
+    transition: background 0.3s;
 }
 
-/* Test Results Styles */
-.test-results-container {
-    width: 100%;
-    max-height: 70vh;
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+.download-report:hover {
+    background: #0056b3;
 }
 
-.test-results-actions {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-
-.test-results-table-wrapper {
-    overflow-y: auto;
-    max-height: 60vh;
+.report-details {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
     border-radius: 5px;
 }
 
-.test-results-table {
+.no-report {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+}
+
+.no-report p:first-child {
+    font-size: 1.1rem;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+/* FAQ Styles */
+.faq-container {
+    padding: 10px;
+}
+
+.faq-item {
+    margin-bottom: 25px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+
+.faq-item:last-child {
+    border-bottom: none;
+}
+
+.faq-item h4 {
+    color: #007bff;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.faq-item p, .faq-item ul, .faq-item ol {
+    margin-bottom: 10px;
+    line-height: 1.5;
+}
+
+.faq-item ul, .faq-item ol {
+    padding-left: 20px;
+    margin-top: 5px;
+}
+
+.faq-item li {
+    margin-bottom: 5px;
+}
+
+.table-container {
+    overflow-x: auto;
+    margin: 15px 0;
+}
+
+.faq-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
+    margin: 10px 0;
 }
 
-.test-results-table th,
-.test-results-table td {
-    padding: 10px;
+.faq-table th, .faq-table td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
     text-align: left;
-    border-bottom: 1px solid #e0e0e0;
 }
 
-.test-results-table th {
+.faq-table th {
     background-color: #f5f5f5;
-    position: sticky;
-    top: 0;
+    font-weight: bold;
 }
 
-.test-results-table tr:hover {
+.faq-table tr:nth-child(even) {
     background-color: #f9f9f9;
 }
 
-.action-btn, .recommend-test-btn {
-    padding: 8px 15px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: background-color 0.3s;
-}
-
-.action-btn {
-    background-color: #4CAF50;
-    color: white;
-}
-
-.action-btn:hover {
-    background-color: #45a049;
-}
-
-.recommend-test-btn {
-    background-color: #2196F3;
-    color: white;
-}
-
-.recommend-test-btn:hover {
-    background-color: #0b7dda;
-}
-
-.recommendation {
+.help-link {
     display: inline-block;
-    padding: 4px 8px;
+    color: #007bff;
+    text-decoration: none;
+    margin-top: 10px;
+    padding: 8px 12px;
+    border: 1px solid #007bff;
     border-radius: 4px;
-    font-size: 12px;
-    font-weight: bold;
+    transition: all 0.3s;
 }
 
-.recommended {
-    background-color: #c8e6c9;
-    color: #2e7d32;
+.help-link:hover {
+    background-color: #007bff;
+    color: white;
 }
 
-.not-recommended {
-    background-color: #ffcdd2;
-    color: #c62828;
+.contact-help {
+    background-color: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #28a745;
 }

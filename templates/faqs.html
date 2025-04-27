@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Help & FAQs - FRT Healthcare</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="faq-container">
+        <h3>Functional Reach Test (FRT) - Help & FAQ</h3>
+        
+        <div class="faq-item">
+            <h4>1. What is the Functional Reach Test (FRT)?</h4>
+            <p>The Functional Reach Test (FRT) is a quick and simple clinical tool designed to assess dynamic balance and fall risk in elderly and frail adults. It measures how far a person can reach forward without moving their feet, helping predict the likelihood of falls.</p>
+        </div>
+        
+        <div class="faq-item">
+            <h4>2. Who should perform the FRT?</h4>
+            <p>The FRT is primarily intended for:</p>
+            <ul>
+                <li>Older adults in the community or clinical settings.</li>
+                <li>Frail adults who are at risk of falling.</li>
+            </ul>
+        </div>
+        
+        <div class="faq-item">
+            <h4>3. How is the Functional Reach Test performed?</h4>
+            <ol>
+                <li>Stand close to a wall without touching it.</li>
+                <li>Raise the arm closest to the wall at shoulder height (90° flexion) with a closed fist.</li>
+                <li>Measure the starting position of the 3rd metacarpal head (knuckle).</li>
+                <li>Reach as far forward as possible without moving your feet or losing balance.</li>
+                <li>Measure the end position of the 3rd metacarpal head.</li>
+            </ol>
+            <p>The difference between start and end points is the reach distance. Three trials are done, and the average of the last two is used for scoring.</p>
+        </div>
+        
+        <div class="faq-item">
+            <h4>4. How are FRT scores interpreted?</h4>
+            <div class="table-container">
+                <table class="faq-table">
+                    <thead>
+                        <tr>
+                            <th>Reach Distance</th>
+                            <th>Fall Risk</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>≥ 25 cm (10 inches)</td>
+                            <td>Low risk of falling</td>
+                        </tr>
+                        <tr>
+                            <td>15–25 cm (6–10 inches)</td>
+                            <td>2x greater fall risk</td>
+                        </tr>
+                        <tr>
+                            <td>≤ 15 cm (6 inches)</td>
+                            <td>4x greater fall risk</td>
+                        </tr>
+                        <tr>
+                            <td>Unable/unwilling to reach</td>
+                            <td>8x greater fall risk</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="faq-item">
+            <h4>5. Need More Help?</h4>
+            <p>If you have any questions, feel free to reach out to our support team at <a href="mailto:support@frthealthcare.com">support@frthealthcare.com</a>.</p>
+        </div>
+    </div>
+</body>
+</html>

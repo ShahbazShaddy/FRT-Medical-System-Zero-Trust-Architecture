@@ -1,72 +1,550 @@
-body {
+:root {
+    --dark-navy: #0a192f;
+    --navy: #112240;
+    --light-navy: #233554;
+    --lightest-navy: #303C55; /* Added for subtle contrasts */
+    --slate: #8892b0;
+    --light-slate: #a8b2d1;
+    --lightest-slate: #ccd6f6;
+    --white: #e6f1ff;
+    --blue: #64ffda; /* Using a brighter, cyan-like blue for glow */
+    --blue-hover: rgba(100, 255, 218, 0.1);
+    --shadow-navy: rgba(2, 12, 27, 0.7);
+
+    --font-sans: 'Poppins', sans-serif;
+    --fz-xxl: 3rem;
+    --fz-xl: 2rem;
+    --fz-lg: 1.5rem;
+    --fz-md: 1.1rem;
+    --fz-sm: 0.9rem;
+    --fz-xs: 0.8rem;
+
+    --border-radius: 4px;
+    --transition: all 0.25s cubic-bezier(0.645, 0.045, 0.355, 1);
+    --animation-duration: 0.6s; /* Base duration for animations */
+}
+
+/* Reset and Base Styles */
+* {
+    box-sizing: border-box;
     margin: 0;
     padding: 0;
-    font-family: 'Poppins', sans-serif;
-    background: #f0f2f5;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
 }
 
-.landing-container {
-    text-align: center;
-    padding: 2rem;
-    max-width: 800px;
-    margin: 0 auto;
+html {
+    scroll-behavior: smooth;
 }
 
-.hero {
-    margin-bottom: 3rem;
-}
-
-h1 {
-    color: #333;
-    font-size: 3rem;
-    margin-bottom: 1rem;
-}
-
-.subtitle {
-    color: #007bff;
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-}
-
-.description {
-    color: #666;
-    margin-bottom: 2rem;
+body {
+    font-family: var(--font-sans);
+    background-color: var(--dark-navy);
+    color: var(--slate);
     line-height: 1.6;
+    font-size: 16px; /* Base font size */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden; /* Prevent horizontal scrollbars from animations */
 }
 
-.button-group {
+/* Navigation */
+.landing-nav {
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    max-width: 300px;
-    margin: 0 auto;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background-color: rgba(10, 25, 47, 0.85); /* Slightly transparent */
+    backdrop-filter: blur(10px);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+    transition: var(--transition);
+    box-shadow: 0 10px 30px -10px var(--shadow-navy);
 }
 
-.landing-btn {
-    padding: 12px 24px;
-    border-radius: 8px;
+.nav-logo {
+    color: var(--blue);
+    font-weight: 700;
+    font-size: var(--fz-lg);
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.nav-link {
+    color: var(--lightest-slate);
     text-decoration: none;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    background: #007bff;
-    color: white;
-    border: none;
+    font-size: var(--fz-sm);
+    transition: var(--transition);
+}
+
+.nav-link:hover {
+    color: var(--blue);
+}
+
+.nav-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--blue);
+    border-radius: var(--border-radius);
+    color: var(--blue);
+    background-color: transparent;
+    text-decoration: none;
+    font-size: var(--fz-sm);
+    transition: var(--transition);
     cursor: pointer;
 }
 
-.landing-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+.nav-btn:hover {
+    background-color: var(--blue-hover);
 }
 
-.patient-btn {
-    background: #0056b3;
+/* Landing Container */
+.landing-container {
+    padding: 8rem 2rem 2rem; /* Increased top padding slightly */
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-.nurse-btn {
-    background: #28a745;
+/* Hero Section */
+.hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: calc(100vh - 100px); /* Adjust based on nav height */
+    gap: 2rem;
+    padding: 2rem 0;
+    overflow: hidden; /* Contain animations */
+}
+
+.hero-content {
+    max-width: 600px;
+}
+
+.hero-title {
+    color: var(--lightest-slate);
+    font-size: var(--fz-xxl);
+    font-weight: 700;
+    margin-bottom: 1rem;
+    line-height: 1.1;
+    text-shadow: 0 0 10px rgba(100, 255, 218, 0.3); /* Subtle glow */
+    position: relative; /* Needed for cursor */
+    display: inline-block; /* Fit content width */
+    min-height: 1.1em; /* Prevent layout shift during typing */
+}
+
+/* Typing Cursor Effect */
+.hero-title::after {
+    content: '|';
+    display: inline-block;
+    vertical-align: baseline;
+    opacity: 1;
+    animation: blink 0.7s infinite;
+    margin-left: 5px;
+    color: var(--blue); /* Cursor color */
+}
+
+.hero-title.typing-done::after {
+    animation: none; /* Stop blinking */
+    opacity: 0; /* Hide cursor when done */
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+.hero-subtitle {
+    color: var(--blue);
+    font-size: var(--fz-lg);
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+}
+
+.hero-description {
+    color: var(--light-slate);
+    font-size: var(--fz-md);
+    margin-bottom: 2rem;
+    max-width: 500px;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+/* Buttons */
+.landing-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: var(--fz-sm);
+    transition: var(--transition);
+    cursor: pointer;
+    text-align: center;
+    display: inline-block;
+}
+
+.primary-btn {
+    background-color: var(--blue);
+    color: var(--dark-navy);
+    border: 1px solid var(--blue);
+    box-shadow: 0 0 15px rgba(100, 255, 218, 0.4); /* Glow effect */
+}
+
+.primary-btn:hover {
+    background-color: transparent;
+    color: var(--blue);
+    box-shadow: 0 0 25px rgba(100, 255, 218, 0.6);
+}
+
+.secondary-btn, .role-btn {
+    background-color: transparent;
+    color: var(--blue);
+    border: 1px solid var(--blue);
+}
+
+.secondary-btn:hover, .role-btn:hover {
+    background-color: var(--blue-hover);
+    box-shadow: 0 0 10px rgba(100, 255, 218, 0.3);
+}
+
+.role-selection {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--lightest-navy);
+}
+
+.role-selection p {
+    font-size: var(--fz-sm);
+    color: var(--light-slate);
+    margin-bottom: 1rem;
+}
+
+.role-buttons {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.role-btn {
+    padding: 0.6rem 1.2rem;
+    font-size: var(--fz-xs);
+}
+
+/* Hero Graphic Placeholder */
+.hero-graphic-placeholder {
+    width: 400px; /* Adjust size as needed */
+    height: 300px; /* Adjust size as needed */
+    background-color: var(--light-navy);
+    border: 1px dashed var(--blue);
+    border-radius: var(--border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--slate);
+    font-size: var(--fz-sm);
+    text-align: center;
+    flex-shrink: 0; /* Prevent shrinking */
+    position: relative; /* For potential pseudo-element effects */
+    overflow: hidden; /* Contain effects */
+    animation: pulse-border 2s infinite ease-in-out; /* Subtle pulse */
+}
+
+.graphic-icon { /* Style for icon inside placeholder */
+    font-size: 4rem;
+    color: var(--blue);
+    opacity: 0.8;
+}
+
+@keyframes pulse-border {
+    0% {
+        box-shadow: 0 0 0 0 rgba(100, 255, 218, 0.4);
+        border-color: var(--blue);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(100, 255, 218, 0);
+        border-color: rgba(100, 255, 218, 0.7);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(100, 255, 218, 0);
+        border-color: var(--blue);
+    }
+}
+
+
+/* Features Section */
+.features-section, .about-section { /* Grouped common styles */
+    padding: 5rem 0; /* Increased padding */
+    margin-top: 5rem; /* Increased margin */
+    border-top: 1px solid var(--light-navy);
+    text-align: center;
+}
+
+.section-title { /* New class for section headings */
+    color: var(--lightest-slate);
+    font-size: var(--fz-xl);
+    margin-bottom: 3rem; /* Increased margin */
+    position: relative;
+    display: inline-block;
+}
+
+/* Optional: Add an underline effect to the title */
+.section-title::after {
+    content: '';
+    display: block;
+    width: 60px;
+    height: 3px;
+    background-color: var(--blue);
+    margin: 0.5rem auto 0;
+    border-radius: var(--border-radius);
+}
+
+/* Features Grid */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    text-align: left; /* Align text left within items */
+    margin-top: 2rem;
+}
+
+.feature-item {
+    background-color: var(--light-navy);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    transition: var(--transition);
+    box-shadow: 0 10px 30px -15px var(--shadow-navy);
+    border: 1px solid transparent; /* Prepare for hover border */
+}
+
+.feature-item:hover {
+    transform: translateY(-7px); /* Slightly more lift */
+    box-shadow: 0 25px 40px -15px var(--shadow-navy); /* Enhanced shadow */
+    border-color: rgba(100, 255, 218, 0.3); /* Subtle border on hover */
+}
+
+.feature-icon { /* Placeholder for icons */
+    font-size: 2rem;
+    color: var(--blue);
+    margin-bottom: 1rem;
+    display: block; /* Make icon block level */
+    text-align: center; /* Center icon */
+    transition: var(--transition);
+}
+
+.feature-item:hover .feature-icon {
+    transform: scale(1.1); /* Scale icon on hover */
+}
+
+.feature-item h3 {
+    color: var(--lightest-slate);
+    font-size: var(--fz-lg);
+    margin-bottom: 0.75rem;
+}
+
+.feature-item p {
+    color: var(--light-slate);
+    font-size: var(--fz-sm);
+    line-height: 1.5;
+}
+
+/* About Section */
+.team-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem; /* Space between mentor and student row */
+    margin-top: 3rem;
+}
+
+.team-member {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.member-photo-placeholder {
+    width: 120px; /* Adjust size as needed */
+    height: 120px;
+    border-radius: 50%; /* Make it circular */
+    background-color: var(--lightest-navy); /* Placeholder color */
+    border: 3px solid var(--blue); /* Glowing border effect */
+    box-shadow: 0 0 15px rgba(100, 255, 218, 0.5); /* Glow */
+    margin-bottom: 1rem;
+    display: flex; /* For potential future image centering */
+    align-items: center;
+    justify-content: center;
+    color: var(--dark-navy); /* Text color for placeholder text if any */
+    font-size: var(--fz-xs);
+    transition: var(--transition);
+}
+
+.team-member:hover .member-photo-placeholder {
+    transform: scale(1.05); /* Scale photo on hover */
+    box-shadow: 0 0 25px rgba(100, 255, 218, 0.7); /* Brighter glow */
+}
+
+.member-icon { /* Style for icons in member placeholders */
+    font-size: 3rem;
+    color: var(--dark-navy);
+    opacity: 0.9;
+}
+
+.team-member h4 {
+    color: var(--lightest-slate);
+    font-size: var(--fz-lg);
+    margin-bottom: 0.25rem;
+}
+
+.member-title { /* Specific class for titles */
+    color: var(--slate);
+    font-size: var(--fz-sm);
+}
+
+.students-row {
+    display: flex;
+    justify-content: center;
+    gap: 4rem; /* Space between students */
+    width: 100%;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+/* Footer */
+.landing-footer {
+    text-align: center;
+    padding: 1.5rem;
+    margin-top: 4rem;
+    color: var(--slate);
+    font-size: var(--fz-xs);
+    border-top: 1px solid var(--light-navy);
+}
+
+/* Scroll Animation Styles */
+.animate-on-scroll {
+    opacity: 0;
+    transition: opacity var(--animation-duration) ease-out, transform var(--animation-duration) ease-out;
+}
+
+.animate-on-scroll.fade-in {
+    transform: translateY(20px); /* Start slightly lower */
+}
+
+/* Add staggered delays */
+.animate-on-scroll.fade-in-delay-1 { transform: translateY(20px); transition-delay: 0.1s; }
+.animate-on-scroll.fade-in-delay-2 { transform: translateY(20px); transition-delay: 0.2s; }
+.animate-on-scroll.fade-in-delay-3 { transform: translateY(20px); transition-delay: 0.3s; }
+.animate-on-scroll.fade-in-delay-4 { transform: translateY(20px); transition-delay: 0.4s; }
+.animate-on-scroll.fade-in-delay-5 { transform: translateY(20px); transition-delay: 0.5s; }
+
+/* Style when element becomes visible */
+.animate-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+
+/* Responsive Adjustments */
+@media (max-width: 992px) {
+    .hero {
+        flex-direction: column;
+        text-align: center;
+        min-height: auto;
+        padding-top: 4rem; /* More space below nav */
+    }
+
+    .hero-content {
+        max-width: 100%;
+        order: 2;
+    }
+
+    .hero-description {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-graphic-placeholder {
+        order: 1;
+        width: 80%;
+        max-width: 400px;
+        height: auto;
+        aspect-ratio: 4 / 3;
+        margin-bottom: 2rem;
+    }
+
+    .hero-buttons, .role-buttons {
+        justify-content: center;
+    }
+
+    .features-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .landing-container {
+        padding-top: 7rem; /* Adjust for nav */
+    }
+}
+
+@media (max-width: 768px) {
+    .landing-nav {
+        padding: 1rem;
+    }
+    .nav-links {
+        /* Consider implementing a mobile menu toggle here */
+        display: none; /* Simple hide for now */
+    }
+    .hero-title {
+        font-size: 2.2rem; /* Adjust size */
+    }
+    .hero-subtitle {
+        font-size: 1.3rem;
+    }
+    .hero-description {
+        font-size: 1rem;
+    }
+    .landing-container {
+        padding: 6rem 1rem 1rem;
+    }
+    .section-title {
+        font-size: 1.8rem;
+        margin-bottom: 2rem;
+    }
+    .features-grid {
+        grid-template-columns: 1fr; /* Stack features on smaller screens */
+        gap: 1rem;
+    }
+    .feature-item {
+        padding: 1rem;
+    }
+    .feature-item h3 {
+        font-size: 1.1rem;
+    }
+    .feature-item p {
+        font-size: 0.85rem;
+    }
+
+    /* Adjust About section for smaller screens */
+    .member-photo-placeholder {
+        width: 100px;
+        height: 100px;
+    }
+    .team-member h4 {
+        font-size: 1.1rem;
+    }
+    .students-row {
+        gap: 2rem; /* Reduce gap */
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-title {
+        font-size: 1.8rem; /* Adjust size */
+    }
 }

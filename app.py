@@ -1,5 +1,5 @@
 import os
-from flask import Flask, session, jsonify, request
+from flask import Flask, session, jsonify, request, render_template
 from flask_session import Session
 from datetime import timedelta
 from flask_socketio import SocketIO, join_room, leave_room
@@ -65,6 +65,10 @@ def doctor_info_legacy():
     """Legacy route that forwards to the new doctor info endpoint"""
     from routes.doctor_routes import get_doctor_info
     return get_doctor_info()
+
+@app.route('/faqs')
+def faqs():
+    return render_template('faqs.html')
 
 # WebSocket event handlers
 @socketio.on('connect')

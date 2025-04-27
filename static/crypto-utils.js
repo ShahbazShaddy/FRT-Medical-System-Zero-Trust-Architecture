@@ -268,6 +268,159 @@ const crypto_utils = {
             bytes[i] = binaryString.charCodeAt(i);
         }
         return bytes.buffer;
+    },
+
+    // Add these file handling functions to the crypto_utils object
+    /**
+     * Convert a file to ArrayBuffer for encryption
+     */
+    fileToArrayBuffer(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+            reader.readAsArrayBuffer(file);
+        });
+    },
+    
+    /**
+     * Convert base64 string to Blob for file download
+     */
+    base64ToBlob(base64, contentType = '') {
+        const byteCharacters = atob(base64);
+        const byteArrays = [];
+        
+        for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+            const slice = byteCharacters.slice(offset, offset + 512);
+            
+            const byteNumbers = new Array(slice.length);
+            for (let i = 0; i < slice.length; i++) {
+                byteNumbers[i] = slice.charCodeAt(i);
+            }
+            
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+        }
+        
+        return new Blob(byteArrays, {type: contentType});
+    },
+    
+    /**
+     * Encrypt a file with the recipient's public key
+     */
+    async encrypt_file(file, recipientPublicKeyPem) {
+        try {
+            // Import the recipient's public key
+            const recipientPublicKey = await this.importPublicKey(recipientPublicKeyPem);
+            
+            // Generate a random symmetric key
+            const symmetricKey = await window.crypto.subtle.generateKey(
+                {
+                    name: "AES-GCM",
+                    length: 256,
+                },
+                true,
+                ["encrypt", "decrypt"]
+            );
+            
+            // Convert file to ArrayBuffer
+            const fileData = await this.fileToArrayBuffer(file);
+            
+            // Encrypt the file with the symmetric key
+            const iv = window.crypto.getRandomValues(new Uint8Array(12));
+            
+            const encryptedFile = await window.crypto.subtle.encrypt(
+                {
+                    name: "AES-GCM",
+                    iv: iv
+                },
+                symmetricKey,
+                fileData
+            );
+            
+            // Export the symmetric key
+            const rawSymmetricKey = await window.crypto.subtle.exportKey("raw", symmetricKey);
+            
+            // Encrypt the symmetric key with the recipient's public key
+            const encryptedSymmetricKey = await window.crypto.subtle.encrypt(
+                {
+                    name: "RSA-OAEP"
+                },
+                recipientPublicKey,
+                rawSymmetricKey
+            );
+            
+            // Return everything needed to decrypt
+            return {
+                encryptedData: encryptedFile,
+                encryptedDataBase64: this.arrayBufferToBase64(encryptedFile),
+                iv: this.arrayBufferToBase64(iv),
+                encryptedSymmetricKey: this.arrayBufferToBase64(encryptedSymmetricKey)
+            };
+        } catch (error) {
+            console.error("File encryption error:", error);
+            throw error;
+        }
+    },
+    
+    /**
+     * Decrypt a file with the user's private key
+     */
+    async decrypt_file(encryptedFileData, privateKeyPem) {
+        try {
+            // Parse the encrypted data
+            let encryptedData;
+            
+            if (typeof encryptedFileData === 'string') {
+                encryptedData = JSON.parse(encryptedFileData);
+            } else {
+                encryptedData = encryptedFileData;
+            }
+            
+            // Import the private key
+            const privateKey = await this.importPrivateKey(privateKeyPem);
+            
+            // Decrypt the symmetric key
+            const encryptedSymmetricKey = this.base64ToArrayBuffer(encryptedData.encryptedSymmetricKey);
+            const iv = this.base64ToArrayBuffer(encryptedData.iv);
+            
+            const rawSymmetricKey = await window.crypto.subtle.decrypt(
+                {
+                    name: "RSA-OAEP"
+                },
+                privateKey,
+                encryptedSymmetricKey
+            );
+            
+            // Import the symmetric key
+            const symmetricKey = await window.crypto.subtle.importKey(
+                "raw",
+                rawSymmetricKey,
+                {
+                    name: "AES-GCM",
+                    length: 256
+                },
+                false,
+                ["decrypt"]
+            );
+            
+            // Decrypt the file
+            const encryptedFileBuffer = this.base64ToArrayBuffer(encryptedData.encryptedDataBase64);
+            
+            const decryptedFile = await window.crypto.subtle.decrypt(
+                {
+                    name: "AES-GCM",
+                    iv: iv
+                },
+                symmetricKey,
+                encryptedFileBuffer
+            );
+            
+            return decryptedFile;
+        } catch (error) {
+            console.error("File decryption error:", error);
+            throw error;
+        }
     }
 };
 

@@ -94,6 +94,50 @@ def live_frt_route():
     result = live_frt()
     return jsonify({'result': result})
 
+# Route to get the logged-in doctor's own FRT history
+@frt_bp.route('/doctor-history')
+def get_doctor_frt_history():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+
+    # Verify user is a doctor (optional but good practice)
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT Role FROM Users WHERE UserID = ?", (session['user_id'],))
+    user = cursor.fetchone()
+
+    if not user or user[0] != 'Doctor':
+         # Even if not strictly necessary for fetching own data, keeps roles clear
+        conn.close()
+        return jsonify({'error': 'Unauthorized access'}), 403
+
+    try:
+        cursor.execute("""
+            SELECT ResultID, MaxDistance, RiskLevel, CreatedAt, Symptoms
+            FROM FRTResults
+            WHERE UserID = ?
+            ORDER BY CreatedAt DESC
+        """, (session['user_id'],))
+
+        results = []
+        for row in cursor.fetchall():
+            results.append({
+                'id': row[0],
+                'maxDistance': row[1],
+                'riskLevel': row[2],
+                'date': row[3].strftime("%Y-%m-%d %H:%M:%S"), # Consistent date format
+                'symptoms': row[4]
+            })
+
+        conn.close()
+        return jsonify(results)
+
+    except Exception as e:
+        if 'conn' in locals() and conn:
+             conn.close()
+        return jsonify({'error': str(e)}), 500
+
+# Route to get patient-specific FRT results (existing route)
 @frt_bp.route('/patient-results/<int:patient_id>')
 def get_patient_results(patient_id):
     if 'user_id' not in session:
@@ -316,3 +360,47 @@ def recommend_test():
     finally:
         if 'conn' in locals():
             conn.close()
+
+@frt_bp.route('/latest-report')
+def get_latest_report():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+        
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Get the latest report for the current patient
+        cursor.execute("""
+            SELECT r.ReportID, r.FilePath, r.ReportName, r.ReportType, r.GeneratedAt,
+                   u.FullName as DoctorName,
+                   (SELECT COUNT(value) FROM STRING_SPLIT(r.IncludedTestIDs, ',')) as TestCount
+            FROM Reports r
+            JOIN Users u ON r.DoctorID = u.UserID
+            WHERE r.PatientID = ?
+            ORDER BY r.GeneratedAt DESC
+        """, (session['user_id'],))
+        
+        report = cursor.fetchone()
+        
+        if report:
+            # Format the data for the frontend
+            report_data = {
+                'report': {
+                    'ReportID': report[0],
+                    'FilePath': f"/api/frt/reports/download/{os.path.basename(report[1])}",
+                    'ReportName': report[2],
+                    'ReportType': report[3],
+                    'GeneratedAt': report[4].strftime("%Y-%m-%d %H:%M:%S") if report[4] else None,
+                    'DoctorName': report[5],
+                    'TestCount': report[6] or 0
+                }
+            }
+            return jsonify(report_data)
+        else:
+            return jsonify({'report': None})
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()

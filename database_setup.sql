@@ -1,6 +1,6 @@
 -- Add a new table for test recommendations
 
-CREATE TABLE IF NOT EXISTS TestRecommendations (
+CREATE TABLE TestRecommendations (
     RecommendationID INT IDENTITY(1,1) PRIMARY KEY,
     DoctorID INT NOT NULL,
     PatientID INT NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS TestRecommendations (
 );
 
 -- Add a new table for reports with additional metadata
-CREATE TABLE IF NOT EXISTS Reports (
+CREATE TABLE Reports (
     ReportID INT IDENTITY(1,1) PRIMARY KEY,
     DoctorID INT NOT NULL,
     PatientID INT NOT NULL,

@@ -5,29 +5,208 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome to FRT Healthcare</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='landing.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
+    <nav class="landing-nav">
+        <div class="nav-logo">FRT Healthcare</div>
+        <div class="nav-links">
+            <a href="#features" class="nav-link">Features</a>
+            <a href="#about" class="nav-link">About</a>
+            <a href="/login" class="nav-btn login-btn">Sign In</a>
+        </div>
+    </nav>
+
     <div class="landing-container">
-        <div class="hero">
-            <h1>FRT Healthcare</h1>
-            <p class="subtitle">Your AI-Powered Healthcare Assistant</p>
-            <p class="description">Get instant health assessments and connect with professional nurses using our advanced Functional Rating Test system.</p>
-        </div>
-        <div class="button-group">
-            <a href="/login" class="landing-btn">Sign In</a>
-            <a href="/signup" class="landing-btn patient-btn">Register as Patient</a>
-            <a href="/signup" class="landing-btn nurse-btn" onclick="setNurseRole(event)">Join as Nurse</a>
-            <a href="/signup" class="landing-btn doctor-btn" onclick="setDoctorRole(event)">Join as Doctor</a>
-        </div>
+        <section class="hero">
+            <div class="hero-content animate-on-scroll fade-in-delay-1">
+                <h1 class="hero-title" id="hero-title"></h1> <!-- Added ID -->
+                <p class="hero-subtitle animate-on-scroll fade-in-delay-2">Your AI-Powered Healthcare Assistant</p>
+                <p class="hero-description animate-on-scroll fade-in-delay-3">Get instant health assessments and connect with professional healthcare providers using our advanced Functional Rating Test system.</p>
+                <div class="hero-buttons animate-on-scroll fade-in-delay-4">
+                    <a href="/signup" class="landing-btn primary-btn">Get Started</a>
+                    <a href="/login" class="landing-btn secondary-btn">Sign In</a>
+                </div>
+                <div class="role-selection animate-on-scroll fade-in-delay-5">
+                    <p>Joining as a professional?</p>
+                    <div class="role-buttons">
+                        <a href="/signup" class="landing-btn role-btn" onclick="setDoctorRole(event)">Join as Doctor</a>
+                        <!-- Add Nurse role back if needed -->
+                        <!-- <a href="/signup" class="landing-btn role-btn" onclick="setNurseRole(event)">Join as Nurse</a> -->
+                    </div>
+                </div>
+            </div>
+            <div class="hero-graphic-placeholder animate-on-scroll fade-in-delay-2"> <!-- Added animation class -->
+                <!-- Placeholder for a graphic or illustration -->
+                
+                <img src="{{ url_for('static', filename='src/hero-image.png') }}" alt="Healthcare App Illustration" class="hero-image">
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="features-section animate-on-scroll fade-in"> <!-- Added animation class -->
+            <h2 class="section-title">Key Features</h2>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <i class="fas fa-robot feature-icon"></i>
+                    <h3>AI-Powered Functional Reach Assessment</h3>
+                    <p>Automatically measures reach distance using Computer Vision and Generative AI for accurate, consistent, and fast fall risk evaluation.</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-video feature-icon"></i>
+                    <h3>Dual Mode Testing</h3>
+                    <p>Perform tests instantly via live camera or upload a recorded video for flexible analysis.</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-brain feature-icon"></i>
+                    <h3>AI Report Drafting</h3>
+                    <p>Generates professional, detailed reports automatically after each test using AI.</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-share-alt feature-icon"></i>
+                    <h3>Secure Report Sharing</h3>
+                    <p>Download PDF reports and securely share them via email or direct link with access control.</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-comments feature-icon"></i>
+                    <h3>Real-Time Doctor-Patient Chat</h3>
+                    <p>Secure built-in chat for instant communication, guidance, and enhanced patient engagement.</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-users feature-icon"></i>
+                    <h3>Multi-User System</h3>
+                    <p>Dedicated interfaces for Patients to track progress and Doctors to monitor multiple patients.</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-headset feature-icon"></i>
+                    <h3>Interactive Cognitive Chatbot</h3>
+                    <p>Assesses cognitive symptoms via simple questions to recommend if an FRT is needed.</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-shield-alt feature-icon"></i>
+                    <h3>Robust Security & Privacy</h3>
+                    <p>Features password hashing, secure sessions, encryption, RBAC, and HIPAA/GDPR compliance.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="about-section animate-on-scroll fade-in"> <!-- Added animation class -->
+            <h2 class="section-title">Meet the Team</h2>
+            <div class="team-container">
+                <div class="team-member mentor">
+                    <div class="member-photo-placeholder">
+                        <i class="fas fa-user-tie member-icon"></i> <!-- Example Icon -->
+                    </div>
+                    <h4>Mr. Waqas</h4>
+                    <p class="member-title">Mentor (Lecturer, UET Lahore)</p>
+                </div>
+                <div class="students-row">
+                    <div class="team-member student">
+                        <div class="member-photo-placeholder">
+                           <i class="fas fa-user-graduate member-icon"></i> <!-- Example Icon -->
+                        </div>
+                        <h4>Shahbaz</h4>
+                        <p class="member-title">Developer (Student, UET)</p>
+                    </div>
+                    <div class="team-member student">
+                        <div class="member-photo-placeholder">
+                            <i class="fas fa-user-graduate member-icon"></i> <!-- Example Icon -->
+                        </div>
+                        <h4>Nouman</h4>
+                        <p class="member-title">Developer (Student, UET)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
     </div>
+
+    <footer class="landing-footer">
+        <p>&copy; 2024 FRT Healthcare. All rights reserved.</p>
+    </footer>
+
     <script>
-        function setNurseRole(event) {
-            localStorage.setItem('selectedRole', 'Nurse');
+        // --- Typing Effect ---
+        const heroTitleElement = document.getElementById('hero-title');
+        const baseText = "FRT ";
+        const words = ["Healthcare", "With AI"];
+        let wordIndex = 0;
+        let charIndex = 0;
+        let isDeleting = false;
+        const typingSpeed = 100; // Speed of typing
+        const deletingSpeed = 50; // Speed of deleting
+        const delayBetweenWords = 1500; // Pause after typing/deleting a word
+
+        function typeDeleteLoop() {
+            const currentWord = words[wordIndex];
+            heroTitleElement.textContent = baseText + currentWord.substring(0, charIndex);
+            heroTitleElement.classList.remove('typing-done'); // Ensure cursor blinks
+
+            if (!isDeleting && charIndex < currentWord.length) {
+                // Typing the word
+                charIndex++;
+                setTimeout(typeDeleteLoop, typingSpeed);
+            } else if (isDeleting && charIndex > 0) {
+                // Deleting the word
+                charIndex--;
+                setTimeout(typeDeleteLoop, deletingSpeed);
+            } else {
+                // Finished typing or deleting
+                isDeleting = !isDeleting; // Toggle state
+                if (!isDeleting) {
+                    // Finished deleting, move to the next word
+                    wordIndex = (wordIndex + 1) % words.length;
+                }
+                // Pause before next action
+                setTimeout(typeDeleteLoop, delayBetweenWords);
+            }
         }
+
+        // Start typing effect when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            heroTitleElement.textContent = baseText; // Start with base text
+            setTimeout(typeDeleteLoop, 500 + delayBetweenWords); // Initial delay
+        });
+
+
+        // --- Role Setting ---
         function setDoctorRole(event) {
             localStorage.setItem('selectedRole', 'Doctor');
+            // window.location.href = '/signup'; // Redirect if needed
         }
+
+        // --- Smooth Scroll ---
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // --- Scroll Animations ---
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+                // Optional: Remove class if you want animation to repeat on scroll up
+                // else {
+                //     entry.target.classList.remove('visible');
+                // }
+            });
+        }, {
+            threshold: 0.1 // Trigger when 10% of the element is visible
+        });
+
+        // Target elements to animate
+        document.querySelectorAll('.animate-on-scroll').forEach(el => {
+            observer.observe(el);
+        });
+
     </script>
 </body>
 </html>
