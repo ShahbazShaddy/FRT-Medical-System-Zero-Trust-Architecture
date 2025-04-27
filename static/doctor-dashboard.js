@@ -44,7 +44,9 @@ function createPatientsModal(patients) {
                     <button onclick="chatWithPatient(${patient.userId}, '${patient.fullName}')">
                         <i class="fas fa-comment-medical"></i> Chat
                     </button>
-                    <button onclick="sendRecommendation(${patient.userId})">See Test</button>
+                    <button onclick="sendRecommendation(${patient.userId})">
+                        <i class="fas fa-file-alt"></i> See Tests
+                    </button>
                 </div>
             </div>
         `;
@@ -805,14 +807,6 @@ async function decryptMessage(encryptedData) {
     }
 }
 
-// Display patient records
-function showPatientRecords() {
-    alert('Feature coming soon: View detailed patient records');
-}
-
-function showAnalytics() {
-    alert('Feature coming soon: View patient analytics');
-}
 
 // Display profile settings - Updated to use the editProfile function
 function showProfileSettings() {
@@ -976,12 +970,11 @@ function createTestResultsModal(results, patientId) {
                     </thead>
                     <tbody>
     `;
-    
+
     results.forEach(result => {
-        // Determine recommendation based on risk level
         const recommendation = getRecommendationFromRisk(result.riskLevel);
         const recommendationClass = recommendation === 'Recommended' ? 'recommended' : 'not-recommended';
-        
+
         html += `
             <tr>
                 <td><input type="checkbox" class="test-checkbox" data-test-id="${result.id}"></td>
@@ -992,14 +985,14 @@ function createTestResultsModal(results, patientId) {
             </tr>
         `;
     });
-    
+
     html += `
                     </tbody>
                 </table>
             </div>
         </div>
     `;
-    
+
     return html;
 }
 

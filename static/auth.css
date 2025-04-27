@@ -209,100 +209,89 @@ body {
 /* Profile Completion Specific Styles */
 .profile-container {
     max-width: 650px; /* Wider container for profile forms */
+    /* Inherits .auth-container styles: background, padding, border-radius, box-shadow, margin */
 }
 
 .profile-container .subtitle {
-    color: var(--light-slate);
-    margin-bottom: 2rem;
-    font-size: var(--fz-sm);
+    color: var(--light-slate); /* Use theme color */
+    margin-bottom: 2rem; /* Space below subtitle */
+    font-size: var(--fz-sm); /* Match other form text */
 }
 
-.auth-form label,
-.form-group label { /* Target labels directly */
-    display: block;
-    margin-bottom: 0.5rem;
-    color: var(--light-slate);
-    font-size: var(--fz-sm);
-    font-weight: 500;
+/* Ensure form elements within profile container use theme styles */
+.profile-container .auth-form {
+    /* Inherits .auth-form styles: display, gap, text-align */
 }
 
-.role-selector label,
-.checkbox-group label {
-    color: var(--light-slate);
-    font-size: var(--fz-sm);
-    display: flex; /* Align items */
-    align-items: center;
-    cursor: pointer;
+.profile-container .form-group {
+    /* Inherits .form-group styles */
 }
 
-.radio-group {
-    display: flex;
-    gap: 1.5rem;
-    margin-top: 0.5rem;
+.profile-container label {
+    /* Inherits label styles: display, margin, color, font-size, font-weight */
 }
 
-.auth-form input[type="radio"],
-.auth-form input[type="checkbox"] {
-    margin-right: 0.5rem;
-    accent-color: var(--blue); /* Modern way to color */
-    width: 1em; /* Adjust size */
-    height: 1em;
-    cursor: pointer;
+.profile-container input[type="text"],
+.profile-container input[type="email"],
+.profile-container input[type="password"],
+.profile-container input[type="tel"],
+.profile-container input[type="date"],
+.profile-container input[type="number"],
+.profile-container select,
+.profile-container textarea {
+    /* Inherits input styles: width, padding, border, border-radius, background, color, font-size, transition, box-sizing */
 }
 
-/* Style Doctor/Patient specific field containers */
-#patient-fields, #doctor-fields {
-    border: 1px dashed var(--light-navy);
-    padding: 1rem;
-    margin-top: 1rem;
-    border-radius: var(--border-radius);
-    background-color: rgba(35, 53, 84, 0.3); /* Slightly different background */
-}
-
-.verify-btn, .text-btn {
-    padding: 0.6rem 1.2rem;
-    font-size: var(--fz-xs);
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: var(--transition);
-    margin-top: 0.5rem; /* Space within verification section */
-    background-color: transparent;
-    color: var(--blue);
-    border: 1px solid var(--blue);
-}
-
-.verify-btn:hover, .text-btn:hover {
-    background-color: var(--blue-hover);
-    box-shadow: 0 0 8px rgba(100, 255, 218, 0.2);
-}
-
-.text-btn {
-    border: none;
-    background: none;
+.profile-container input::placeholder,
+.profile-container textarea::placeholder {
+    /* Inherits placeholder styles */
     color: var(--slate);
-    padding: 0.5rem;
-    margin-left: 0.5rem;
+    opacity: 0.7;
 }
 
-.text-btn:hover {
-    color: var(--blue);
-    background: none;
-    box-shadow: none;
-    text-decoration: underline;
+.profile-container input:focus,
+.profile-container select:focus,
+.profile-container textarea:focus {
+    /* Inherits focus styles: outline, border-color, box-shadow */
 }
 
-#email-verification {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--light-navy);
+.profile-container .auth-btn {
+    /* Inherits .auth-btn styles: padding, border-radius, font-weight, font-size, transition, cursor, text-align, display, background, color, border, box-shadow, margin-top */
 }
 
-.verification-message {
-    color: var(--light-slate);
-    font-size: var(--fz-sm);
-    margin-bottom: 1rem;
+.profile-container .auth-btn:hover {
+    /* Inherits .auth-btn:hover styles: background, color, box-shadow */
 }
 
+/* Style the debug info box */
+.debug-info {
+    background: var(--light-navy); /* Use theme color */
+    color: var(--slate); /* Use theme color */
+    padding: 0.5rem 1rem; /* Adjust padding */
+    margin-bottom: 1.5rem; /* Space below */
+    border-radius: var(--border-radius);
+    font-size: var(--fz-xs); /* Smaller font */
+    border: 1px solid var(--lightest-navy); /* Subtle border */
+    text-align: left; /* Align text left */
+}
+
+/* Style the request status box */
+#request-status {
+    position: fixed;
+    bottom: 1rem; /* Adjust position */
+    right: 1rem;
+    padding: 0.8rem 1.2rem; /* Adjust padding */
+    background: var(--navy); /* Use theme color */
+    color: var(--light-slate); /* Use theme color */
+    border-radius: var(--border-radius);
+    display: none; /* Hidden by default */
+    font-size: var(--fz-xs); /* Smaller font */
+    z-index: 1100; /* Ensure it's above other elements */
+    border: 1px solid var(--light-navy); /* Subtle border */
+    box-shadow: 0 5px 15px var(--shadow-navy); /* Add shadow */
+}
+
+/* Status message styling (already defined, ensure consistency) */
 .status-message {
     margin: 15px 0;
     padding: 12px 15px;
@@ -315,9 +304,9 @@ body {
 
 .status-message.error {
     display: block;
-    background-color: rgba(248, 215, 218, 0.1); /* Use theme colors */
-    color: #f5c6cb; /* Lighter red for dark theme */
-    border-color: rgba(245, 198, 203, 0.5);
+    background-color: rgba(229, 115, 115, 0.1); /* danger-red-hover */
+    color: var(--danger-red);
+    border-color: rgba(229, 115, 115, 0.5);
 }
 
 .status-message.success {

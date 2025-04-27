@@ -10,64 +10,308 @@
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script src="{{ url_for('static', filename='crypto-utils.js') }}"></script>
 </head>
-<body data-user-id="{{ session['user_id'] }}">
+<body data-user-id="{{ session['user_id'] }}" class="sidebar-closed">
     <div class="dashboard-container">
         <nav class="dashboard-nav">
-            <div class="nav-header">
-                <h2>FRT Healthcare</h2>
-                <p>Welcome, Dr. {{ session['full_name'] }}</p>
-                <p class="doctor-id">Your Doctor ID: <span id="doctorId"></span></p>
+            <div class="nav-left">
+                <button id="sidebar-toggle" class="sidebar-toggle-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="nav-header">
+                    <h2>FRT Healthcare</h2>
+                </div>
             </div>
-            <a href="/auth/logout" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            <button id="logout-btn" class="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </nav>
 
-        <div class="dashboard-content">
-            <div class="dashboard-grid">
-                <!-- Associated Patients Card -->
-                <div class="dashboard-card" onclick="showPatients()">
-                    <i class="fas fa-users"></i>
-                    <h3>My Patients</h3>
-                    <p>View and manage your associated patients</p>
+        <aside class="sidebar">
+            <nav class="sidebar-nav">
+                <a href="#" class="sidebar-link" onclick="showPatients()" data-title="My Patients">
+                    <i class="fas fa-users"></i><span>My Patients</span>
+                </a>
+                
+                <a href="/chat" class="sidebar-link" data-title="FRT Performer">
+                    <i class="fas fa-robot"></i><span>FRT Performer</span>
+                </a>
+                <a href="#" class="sidebar-link" onclick="showDoctorTestHistory()" data-title="My Test History">
+                    <i class="fas fa-history"></i><span>My Test History</span>
+                </a>
+                </a>
+                <a href="#" class="sidebar-link" onclick="editProfile()" data-title="Edit Profile">
+                    <i class="fas fa-user-edit"></i><span>Edit Profile</span>
+                </a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <!-- Dashboard header with stats -->
+            <div class="dashboard-header">
+                <div class="welcome-section">
+                    <div class="welcome-text">
+                        <h2>Welcome, Dr. {{ session['full_name'] }}</h2>
+                        <p>Here's your practice overview</p>
+                    </div>
+                    <div class="date-time">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span id="current-date-time">Loading...</span>
+                    </div>
                 </div>
-
-                <!-- Patient Records Card -->
-                <div class="dashboard-card" onclick="showPatientRecords()">
-                    <i class="fas fa-file-medical"></i>
-                    <h3>Patient Records</h3>
-                    <p>View detailed FRT history and assessments of your patients</p>
+                
+                <div class="stats-row">
+                    <div class="stat-card">
+                        <i class="fas fa-users stat-icon"></i>
+                        <div class="stat-title">Active Patients</div>
+                        <div class="stat-value" id="active-patients">--</div>
+                        <div class="stat-change" id="patients-change">Loading data...</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <i class="fas fa-clipboard-check stat-icon"></i>
+                        <div class="stat-title">FRT Tests Reviewed</div>
+                        <div class="stat-value" id="tests-reviewed">--</div>
+                        <div class="stat-change" id="tests-change">Loading data...</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <i class="fas fa-file-medical-alt stat-icon"></i>
+                        <div class="stat-title">Reports Generated</div>
+                        <div class="stat-value" id="reports-generated">--</div>
+                        <div class="stat-change" id="reports-change">Loading data...</div>
+                    </div>
                 </div>
-
-                <!-- FRT Performer Card -->
-                <div class="dashboard-card" onclick="window.location.href='/chat'">
-                    <i class="fas fa-robot"></i>
-                    <h3>FRT Performer</h3>
-                    <p>Experience the Functional Rating Test to better guide your patients</p>
+                <!-- Doctor ID display -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">Doctor Information</h3>
                 </div>
-
-                <!-- Test History Card (Doctor's Own) -->
-                <div class="dashboard-card" onclick="showDoctorTestHistory()">
-                    <i class="fas fa-history"></i>
-                    <h3>My Test History</h3>
-                    <p>Review your own FRT results from using the Performer</p>
-                </div>
-
-                <!-- Analytics Card -->
-                <div class="dashboard-card" onclick="showAnalytics()">
-                    <i class="fas fa-chart-bar"></i>
-                    <h3>Analytics</h3>
-                    <p>View statistics and trends across your patient population</p>
-                </div>
-
-
-                <!-- Edit Profile Card - Modified Card -->
-                <div class="dashboard-card" onclick="editProfile()">
-                    <i class="fas fa-user-edit"></i>
-                    <h3>Edit Profile</h3>
-                    <p>Update your professional information and account settings</p>
+                <div class="doctor-info-display">
+                    <p class="doctor-id">Your Doctor ID: <span id="doctorId"></span></p>
+                    <p>Share this ID with your patients to allow them to connect with you.</p>
                 </div>
             </div>
-        </div>
+            </div>
+            
+            <!-- Add breadcrumb navigation -->
+            <div class="breadcrumb">
+                <a href="/doctor-dashboard">Dashboard</a>
+                <span class="breadcrumb-separator">/</span>
+                <span class="current">Overview</span>
+            </div>
+            
+            <div class="dashboard-content">
+                <!-- Wrap grid in a section card -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h3 class="section-title">Quick Actions</h3>
+                        <div class="section-actions">
+                            <button id="refresh-dashboard">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    <div class="dashboard-grid">
+                        <!-- Associated Patients Card -->
+                        <div class="dashboard-card" onclick="showPatients()">
+                            <i class="fas fa-users"></i>
+                            <h3>My Patients</h3>
+                            <p>View and manage your associated patients</p>
+                        </div>
+
+                        
+
+                        <!-- FRT Performer Card -->
+                        <div class="dashboard-card" onclick="window.location.href='/chat'">
+                            <i class="fas fa-robot"></i>
+                            <h3>FRT Performer</h3>
+                            <p>Experience the Functional Rating Test to better guide your patients</p>
+                        </div>
+
+                        <!-- Test History Card (Doctor's Own) -->
+                        <div class="dashboard-card" onclick="showDoctorTestHistory()">
+                            <i class="fas fa-history"></i>
+                            <h3>My Test History</h3>
+                            <p>Review your own FRT results from using the Performer</p>
+                        </div>
+
+                        
+                        <!-- Edit Profile Card -->
+                        <div class="dashboard-card" onclick="editProfile()">
+                            <i class="fas fa-user-edit"></i>
+                            <h3>Edit Profile</h3>
+                            <p>Update your professional information and account settings</p>
+                        </div>
+                    </div>
+                </div>
+                
+                
+            </div>
+        </main>
     </div>
+    
     <script src="{{ url_for('static', filename='doctor-dashboard.js') }}"></script>
+    
+    <script>
+        // Update current date and time
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('current-date-time').textContent = now.toLocaleDateString('en-US', options);
+        }
+        
+        // Update stats with actual data from the API
+        function updateStats() {
+            // Show loading indicators
+            document.getElementById('active-patients').textContent = "--";
+            document.getElementById('patients-change').textContent = "Loading data...";
+            document.getElementById('tests-reviewed').textContent = "--";
+            document.getElementById('tests-change').textContent = "Loading data...";
+            document.getElementById('reports-generated').textContent = "--";
+            document.getElementById('reports-change').textContent = "Loading data...";
+            
+            // Fetch actual statistics from the backend
+            fetch('/api/doctor/dashboard-stats')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch dashboard statistics');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update active patients
+                    if (data.activePatients) {
+                        document.getElementById('active-patients').textContent = data.activePatients.count;
+                        
+                        const patientsChangeText = data.activePatients.newThisMonth > 0 ? 
+                            `+${data.activePatients.newThisMonth} this month` : 
+                            `${data.activePatients.newThisMonth} this month`;
+                        document.getElementById('patients-change').textContent = patientsChangeText;
+                        
+                        // Add appropriate class
+                        document.getElementById('patients-change').className = 
+                            data.activePatients.newThisMonth >= 0 ? 'stat-change positive' : 'stat-change negative';
+                    }
+                    
+                    // Update tests reviewed
+                    if (data.testsReviewed) {
+                        document.getElementById('tests-reviewed').textContent = data.testsReviewed.count;
+                        
+                        const testsChangeText = data.testsReviewed.change > 0 ? 
+                            `+${data.testsReviewed.change} from last month` : 
+                            `${data.testsReviewed.change} from last month`;
+                        document.getElementById('tests-change').textContent = testsChangeText;
+                        
+                        // Add appropriate class
+                        document.getElementById('tests-change').className = 
+                            data.testsReviewed.change >= 0 ? 'stat-change positive' : 'stat-change negative';
+                    }
+                    
+                    // Update reports generated
+                    if (data.reportsGenerated) {
+                        document.getElementById('reports-generated').textContent = data.reportsGenerated.count;
+                        
+                        const reportsChangeText = data.reportsGenerated.change > 0 ? 
+                            `+${data.reportsGenerated.change} this month` : 
+                            `${data.reportsGenerated.change} this month`;
+                        document.getElementById('reports-change').textContent = reportsChangeText;
+                        
+                        // Add appropriate class
+                        document.getElementById('reports-change').className = 
+                            data.reportsGenerated.change >= 0 ? 'stat-change positive' : 'stat-change negative';
+                    }
+                    
+                    // Fetch and display doctor ID
+                    if (data.doctorId) {
+                        document.getElementById('doctorId').textContent = data.doctorId;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching dashboard stats:', error);
+                    // Show error message or fallback to default values
+                    document.getElementById('active-patients').textContent = "N/A";
+                    document.getElementById('patients-change').textContent = "Failed to load data";
+                    document.getElementById('patients-change').className = 'stat-change';
+                    
+                    document.getElementById('tests-reviewed').textContent = "N/A";
+                    document.getElementById('tests-change').textContent = "Failed to load data";
+                    document.getElementById('tests-change').className = 'stat-change';
+                    
+                    document.getElementById('reports-generated').textContent = "N/A";
+                    document.getElementById('reports-change').textContent = "Failed to load data";
+                    document.getElementById('reports-change').className = 'stat-change';
+                });
+        }
+        
+        // Add logout functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update date and time
+            updateDateTime();
+            setInterval(updateDateTime, 60000); // Update every minute
+            
+            // Update stats
+            updateStats();
+            
+            // Set up refresh button
+            document.getElementById('refresh-dashboard').addEventListener('click', function() {
+                this.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refreshing...';
+                updateStats();
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-sync-alt"></i> Refresh';
+                }, 1000);
+            });
+            
+            // Set up logout functionality
+            document.getElementById('logout-btn').addEventListener('click', async function() {
+                try {
+                    const response = await fetch('/auth/logout', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        window.location.href = '/login'; // Redirect to login page
+                    } else {
+                        console.error('Logout failed');
+                    }
+                } catch (error) {
+                    console.error('Error during logout:', error);
+                }
+            });
+            
+            // Set up sidebar toggle functionality
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            const body = document.body;
+            
+            // Function to toggle sidebar state
+            const toggleSidebar = () => {
+                body.classList.toggle('sidebar-closed');
+                // Store state in localStorage
+                if (body.classList.contains('sidebar-closed')) {
+                    localStorage.setItem('sidebarState', 'closed');
+                } else {
+                    localStorage.setItem('sidebarState', 'open');
+                }
+            };
+            
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', toggleSidebar);
+            }
+            
+            // Check localStorage for saved state
+            const savedState = localStorage.getItem('sidebarState');
+            // Apply initial state based on localStorage or default
+            if (savedState === 'open' && window.innerWidth > 768) {
+                body.classList.remove('sidebar-closed');
+            }
+        });
+    </script>
 </body>
 </html>

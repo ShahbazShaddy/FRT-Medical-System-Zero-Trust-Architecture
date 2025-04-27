@@ -1629,3 +1629,99 @@ body.sidebar-closed .main-content {
         transform: translateY(0);
     }
 }
+
+/* Test Results Modal */
+.test-results-container {
+    padding: 1.5rem;
+    background: var(--light-navy); /* Use theme color */
+    border-radius: var(--border-radius);
+    color: var(--light-slate);
+}
+
+.test-results-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.test-results-actions button {
+    padding: 0.6rem 1.2rem;
+    font-size: var(--fz-sm);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.test-results-actions .action-btn {
+    background: var(--blue);
+    color: var(--dark-navy);
+    border: none;
+}
+
+.test-results-actions .action-btn:hover {
+    background: var(--blue-hover);
+}
+
+.test-results-actions .recommend-test-btn {
+    background: var(--danger-red);
+    color: var(--white);
+    border: none;
+}
+
+.test-results-actions .recommend-test-btn:hover {
+    background: var(--danger-red-hover);
+}
+
+/* Test Results Table */
+.test-results-table-wrapper {
+    overflow-x: auto;
+    border: 1px solid var(--light-navy);
+    border-radius: var(--border-radius);
+    background: var(--navy);
+    padding: 1rem;
+}
+
+.test-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.test-results-table th, .test-results-table td {
+    padding: 0.8rem;
+    border-bottom: 1px solid var(--light-navy);
+    font-size: var(--fz-sm);
+}
+
+.test-results-table th {
+    background: var(--light-navy);
+    color: var(--lightest-slate);
+    font-weight: 600;
+}
+
+.test-results-table tr:hover {
+    background: rgba(100, 255, 218, 0.05);
+}
+
+.test-results-table .recommendation.recommended {
+    color: var(--blue);
+    font-weight: 600;
+}
+
+.test-results-table .recommendation.not-recommended {
+    color: var(--danger-red);
+    font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .test-results-actions {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .test-results-table th, .test-results-table td {
+        font-size: var(--fz-xs);
+    }
+}

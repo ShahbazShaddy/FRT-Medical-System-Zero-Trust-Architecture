@@ -12,7 +12,7 @@
         <h1>Complete Your Doctor Profile</h1>
         <p class="subtitle">Please provide your professional information to complete your profile</p>
         
-        <div style="background: #f8f9fa; padding: 5px; margin-bottom: 10px; border-radius: 5px; font-size: 12px;">
+        <div class="debug-info"> <!-- Changed style to class -->
             Debug info: User ID: {{ session['user_id'] }}, Role: {{ session['role'] }}
         </div>
         
@@ -57,23 +57,27 @@
         </form>
     </div>
     
-    <div id="request-status" style="position: fixed; bottom: 10px; right: 10px; padding: 10px; background: #f8f9fa; border-radius: 5px; display: none;"></div>
+    <div id="request-status"></div> <!-- Removed inline styles -->
     
     <script>
         // Request logging function
         const originalFetch = window.fetch;
         window.fetch = function() {
             const statusEl = document.getElementById('request-status');
-            statusEl.style.display = 'block';
+            statusEl.style.display = 'block'; // Show the element
             statusEl.textContent = `Sending request to: ${arguments[0]}`;
             
             return originalFetch.apply(this, arguments)
                 .then(response => {
                     statusEl.textContent = `Response received: ${response.status}`;
+                    // Optionally hide after a delay
+                    // setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
                     return response;
                 })
                 .catch(error => {
                     statusEl.textContent = `Request failed: ${error.message}`;
+                    // Optionally hide after a delay
+                    // setTimeout(() => { statusEl.style.display = 'none'; }, 5000);
                     throw error;
                 });
         };
