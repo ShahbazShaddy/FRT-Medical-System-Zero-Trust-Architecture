@@ -1,5 +1,6 @@
 import os
 import time
+import re
 from datetime import datetime
 from fpdf import FPDF
 import matplotlib.pyplot as plt
@@ -103,6 +104,122 @@ def generate_chart(test_dates, distances):
     
     return buf
 
+def process_markdown_for_pdf(pdf, text):
+    """
+    Process markdown text and apply proper formatting directly using FPDF methods.
+    """
+    if not text:
+        return
+    
+    # Split the text into paragraphs
+    paragraphs = text.split('\n\n')
+    
+    for paragraph in paragraphs:
+        paragraph = paragraph.strip()
+        if not paragraph:
+            pdf.ln(4)  # Empty line
+            continue
+            
+        # Check if it's a heading
+        heading_match = re.match(r'^(#{1,3})\s+(.+)$', paragraph)
+        if heading_match:
+            level = len(heading_match.group(1))
+            heading_text = heading_match.group(2).strip()
+            
+            # Set appropriate font size based on heading level
+            if level == 1:
+                pdf.set_font('Arial', 'B', 14)
+            elif level == 2:
+                pdf.set_font('Arial', 'B', 12)
+            else:
+                pdf.set_font('Arial', 'B', 11)
+                
+            pdf.set_text_color(44, 62, 80)  # Dark blue for headings
+            pdf.multi_cell(0, 6, heading_text, 0, 1, 'L')
+            pdf.ln(2)
+            
+            # Reset font
+            pdf.set_font('Arial', '', 10)
+            pdf.set_text_color(0, 0, 0)
+            continue
+            
+        # Check if it's a bullet point list
+        if paragraph.startswith('- ') or paragraph.startswith('* '):
+            lines = paragraph.split('\n')
+            for line in lines:
+                if line.startswith('- ') or line.startswith('* '):
+                    bullet_text = line[2:].strip()
+                    pdf.set_x(pdf.get_x() + 5)  # Indent
+                    pdf.cell(5, 5, '•', 0, 0, 'R')
+                    pdf.multi_cell(0, 5, bullet_text, 0, 1)
+            continue
+            
+        # Check if it's a numbered list
+        numbered_list = True
+        lines = paragraph.split('\n')
+        for line in lines:
+            if not re.match(r'^\d+\.\s+', line):
+                numbered_list = False
+                break
+                
+        if numbered_list:
+            for line in lines:
+                match = re.match(r'^(\d+)\.\s+(.+)$', line)
+                if match:
+                    number = match.group(1)
+                    item_text = match.group(2).strip()
+                    pdf.set_x(pdf.get_x() + 5)  # Indent
+                    pdf.cell(8, 5, f"{number}.", 0, 0, 'R')
+                    pdf.multi_cell(0, 5, item_text, 0, 1)
+            continue
+        
+        # Process inline formatting (bold and italic)
+        # We'll do this by splitting the paragraph into segments
+        segments = []
+        current_pos = 0
+        
+        # Process bold text (**text**)
+        bold_pattern = re.compile(r'\*\*(.*?)\*\*')
+        for match in bold_pattern.finditer(paragraph):
+            # Add text before the match
+            if match.start() > current_pos:
+                segments.append(('regular', paragraph[current_pos:match.start()]))
+            
+            # Add the bold text
+            segments.append(('bold', match.group(1)))
+            
+            current_pos = match.end()
+        
+        # Add any remaining text
+        if current_pos < len(paragraph):
+            segments.append(('regular', paragraph[current_pos:]))
+        
+        # If no segments with formatting were found, treat as regular paragraph
+        if not segments:
+            segments = [('regular', paragraph)]
+        
+        # Print segments with appropriate formatting
+        x_position = pdf.get_x()
+        line_height = 5
+        
+        for style, text in segments:
+            if style == 'bold':
+                pdf.set_font('Arial', 'B', 10)
+            else:
+                pdf.set_font('Arial', '', 10)
+            
+            pdf.multi_cell(0, line_height, text, 0, 1)
+        
+        pdf.ln(2)  # Space after paragraph
+
+# Replace the old parse_markdown function
+def parse_markdown(text):
+    """
+    This function is no longer used directly, but kept for backward compatibility.
+    Use process_markdown_for_pdf instead for proper formatting.
+    """
+    return text
+
 async def get_groq_analysis(patient_data, test_results):
     """Use Groq to generate analytical insights about the patient's FRT results"""
     GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
@@ -112,16 +229,27 @@ async def get_groq_analysis(patient_data, test_results):
     # Format the data for the prompt
     results_text = ""
     for i, result in enumerate(test_results):
-        results_text += f"Test {i+1} ({format_date(result['date'])}): Distance: {result['maxDistance']}cm, Risk Level: {result['riskLevel']}\n"
+        # Sanitize inputs before adding to the prompt
+        max_distance = str(result.get('maxDistance', 'N/A')).replace('"', '').replace("'", "")
+        risk_level = str(result.get('riskLevel', 'N/A')).replace('"', '').replace("'", "")
+        date = format_date(result.get('date', 'N/A'))
+        
+        results_text += f"Test {i+1} ({date}): Distance: {max_distance}cm, Risk Level: {risk_level}\n"
+    
+    # Sanitize patient data before using in prompt
+    full_name = str(patient_data.get('fullName', 'Not provided')).replace('"', '').replace("'", "")
+    age = str(patient_data.get('age', 'Not provided')).replace('"', '').replace("'", "")
+    gender = str(patient_data.get('gender', 'Not provided')).replace('"', '').replace("'", "")
+    medical_history = str(patient_data.get('medicalHistory', 'Not provided')).replace('"', '').replace("'", "")
     
     # Create the prompt for Groq
     prompt = f"""You are a medical report writing assistant. Please analyze these Functional Reach Test results for a patient:
 
 Patient Information:
-Name: {patient_data.get('fullName', 'Not provided')}
-Age: {patient_data.get('age', 'Not provided')}
-Gender: {patient_data.get('gender', 'Not provided')}
-Medical History: {patient_data.get('medicalHistory', 'Not provided')}
+Name: {full_name}
+Age: {age}
+Gender: {gender}
+Medical History: {medical_history}
 
 FRT Test Results:
 {results_text}
@@ -307,8 +435,8 @@ def create_medical_report(doctor_data, patient_data, test_results, analysis_text
         pdf.set_font('Arial', '', 10)
         pdf.set_text_color(0, 0, 0)
         
-        # Format and add the analysis text - handle multiple paragraphs
-        pdf.multi_cell(0, 6, analysis_text)
+        # Process markdown formatting in the analysis text
+        process_markdown_for_pdf(pdf, analysis_text)
     
     # Add disclaimer
     pdf.ln(10)

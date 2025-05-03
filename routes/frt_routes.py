@@ -404,3 +404,49 @@ def get_latest_report():
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
+
+@frt_bp.route('/test-details/<int:test_id>')
+def get_test_details(test_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+        
+    # Verify that the requester is a doctor
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user is a doctor
+        cursor.execute("SELECT Role FROM Users WHERE UserID = ?", (session['user_id'],))
+        user = cursor.fetchone()
+        
+        if not user or user[0] != 'Doctor':
+            return jsonify({'error': 'Unauthorized access'}), 403
+        
+        # Get the test details
+        cursor.execute("""
+            SELECT r.ResultID, r.MaxDistance, r.RiskLevel, r.CreatedAt, r.Symptoms, u.FullName, u.UserID
+            FROM FRTResults r
+            JOIN Users u ON r.UserID = u.UserID
+            WHERE r.ResultID = ?
+        """, (test_id,))
+        
+        test = cursor.fetchone()
+        
+        if not test:
+            return jsonify({'error': 'Test not found'}), 404
+            
+        test_details = {
+            'id': test[0],
+            'maxDistance': test[1],
+            'riskLevel': test[2],
+            'date': test[3].strftime("%Y-%m-%d %H:%M:%S") if test[3] else None,
+            'symptoms': test[4],
+            'patientName': test[5],
+            'patientId': test[6]
+        }
+        
+        return jsonify(test_details)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()

@@ -957,6 +957,17 @@ function createTestResultsModal(results, patientId) {
                 <button id="generate-report-btn" class="action-btn">Generate Report</button>
                 <button class="recommend-test-btn" onclick="recommendFRTTest(${patientId})">Recommend New Test</button>
             </div>
+            <div class="test-results-info">
+                <div class="report-generation-info">
+                    <h4>Report Generation</h4>
+                    <p>Select tests to include in the report. The AI will analyze:</p>
+                    <ul>
+                        <li><strong>Maximum Distance:</strong> The reach distance in centimeters</li>
+                        <li><strong>Risk Level:</strong> The assessed fall risk based on distance</li>
+                        <li><strong>Conversation:</strong> Symptoms discussed during assessment</li>
+                    </ul>
+                </div>
+            </div>
             <div class="test-results-table-wrapper">
                 <table class="test-results-table">
                     <thead>
@@ -965,47 +976,90 @@ function createTestResultsModal(results, patientId) {
                             <th>Test Date</th>
                             <th>Max Distance</th>
                             <th>Risk Level</th>
-                            <th>Recommendation</th>
+                            <th>Details</th>
                         </tr>
                     </thead>
-                    <tbody>
-    `;
+                    <tbody>`;
 
-    results.forEach(result => {
-        const recommendation = getRecommendationFromRisk(result.riskLevel);
-        const recommendationClass = recommendation === 'Recommended' ? 'recommended' : 'not-recommended';
-
+    results.forEach(test => {
+        // Skip entries that are just recommendations with no actual test data
+        if (test.riskLevel === 'Recommended' && test.maxDistance === 0) {
+            return;
+        }
+        
+        // Determine CSS class based on risk level
+        let riskClass = '';
+        if (test.riskLevel.includes('Low risk')) {
+            riskClass = 'low-risk';
+        } else if (test.riskLevel.includes('2x greater')) {
+            riskClass = 'medium-risk';
+        } else if (test.riskLevel.includes('4x greater')) {
+            riskClass = 'high-risk';
+        }
+        
+        const testDate = new Date(test.date).toLocaleString();
+        
         html += `
-            <tr>
-                <td><input type="checkbox" class="test-checkbox" data-test-id="${result.id}"></td>
-                <td>${new Date(result.date).toLocaleDateString()}</td>
-                <td>${result.maxDistance} cm</td>
-                <td>${result.riskLevel}</td>
-                <td><span class="recommendation ${recommendationClass}">${recommendation}</span></td>
-            </tr>
-        `;
+            <tr class="${riskClass}">
+                <td><input type="checkbox" class="test-checkbox" data-test-id="${test.id}" data-distance="${test.maxDistance}" data-risk="${test.riskLevel}"></td>
+                <td>${testDate}</td>
+                <td><strong>${test.maxDistance.toFixed(2)} cm</strong></td>
+                <td><span class="risk-indicator ${riskClass}">${test.riskLevel}</span></td>
+                <td>
+                    <button class="view-details-btn" 
+                        onclick="viewTestDetails(${test.id}, '${test.maxDistance}', '${test.riskLevel.replace(/'/g, "\\'")}', '${testDate}')">
+                        View Details
+                    </button>
+                </td>
+            </tr>`;
     });
 
     html += `
                     </tbody>
                 </table>
             </div>
-        </div>
-    `;
+            <div id="selected-tests-summary" class="selected-tests-summary">
+                <h4>Selected Tests Summary</h4>
+                <div id="selected-tests-details">Select tests above to see summary</div>
+            </div>
+        </div>`;
 
     return html;
 }
 
-// Determine recommendation based on risk level
-function getRecommendationFromRisk(riskLevel) {
-    if (riskLevel.toLowerCase().includes('low risk')) {
-        return 'Recommended';
-    } else {
-        return 'Not Recommended';
-    }
+// Add this new function to view test details
+function viewTestDetails(testId, maxDistance, riskLevel, testDate) {
+    // Fetch the full details of the test including conversation
+    fetch(`/api/frt/test-details/${testId}`)
+        .then(response => response.json())
+        .then(data => {
+            showModal('Test Details', `
+                <div class="test-details-container">
+                    <h3>FRT Test Results - ${testDate}</h3>
+                    <div class="test-metrics">
+                        <div class="metric">
+                            <span class="metric-label">Maximum Distance:</span>
+                            <span class="metric-value">${maxDistance} cm</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Risk Level:</span>
+                            <span class="metric-value risk-level">${riskLevel}</span>
+                        </div>
+                    </div>
+                    <div class="test-conversation">
+                        <h4>Assessment Conversation:</h4>
+                        <div class="conversation-log">${formatSymptoms(data.symptoms || 'No conversation recorded')}</div>
+                    </div>
+                </div>
+            `);
+        })
+        .catch(error => {
+            console.error('Error fetching test details:', error);
+            showModal('Error', '<p>Failed to load test details. Please try again later.</p>');
+        });
 }
 
-// Set up event handlers for report generation
+// Update setupReportGenerationHandlers to include an event listener for checkboxes
 function setupReportGenerationHandlers(patientId) {
     // Add event listener for "Select All" checkbox
     const selectAllCheckbox = document.getElementById('select-all-tests');
@@ -1015,6 +1069,7 @@ function setupReportGenerationHandlers(patientId) {
             testCheckboxes.forEach(checkbox => {
                 checkbox.checked = selectAllCheckbox.checked;
             });
+            updateSelectedTestsSummary();
         });
     }
     
@@ -1025,6 +1080,36 @@ function setupReportGenerationHandlers(patientId) {
             generateTestReport(patientId);
         });
     }
+    
+    // Add event listeners for individual checkboxes to update summary
+    document.querySelectorAll('.test-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedTestsSummary);
+    });
+}
+
+// Add a function to update the summary of selected tests
+function updateSelectedTestsSummary() {
+    const selectedCheckboxes = document.querySelectorAll('.test-checkbox:checked');
+    const summaryDiv = document.getElementById('selected-tests-details');
+    
+    if (selectedCheckboxes.length === 0) {
+        summaryDiv.innerHTML = 'Select tests above to see summary';
+        return;
+    }
+    
+    let html = `<p><strong>${selectedCheckboxes.length}</strong> test(s) selected for report:</p><ul>`;
+    
+    selectedCheckboxes.forEach(checkbox => {
+        const row = checkbox.closest('tr');
+        const date = row.cells[1].textContent;
+        const distance = checkbox.getAttribute('data-distance');
+        const risk = checkbox.getAttribute('data-risk');
+        
+        html += `<li><strong>${date}:</strong> ${distance} cm - ${risk}</li>`;
+    });
+    
+    html += '</ul>';
+    summaryDiv.innerHTML = html;
 }
 
 // Generate report for selected tests

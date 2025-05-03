@@ -1725,3 +1725,113 @@ body.sidebar-closed .main-content {
         font-size: var(--fz-xs);
     }
 }
+
+/* Test Results Styles for Report Generation */
+.test-results-info {
+    margin-bottom: 1.5rem;
+    background: var(--light-navy);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+}
+
+.test-results-table-wrapper {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 1.5rem;
+}
+
+.test-results-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.test-results-table th, 
+.test-results-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--lightest-navy);
+}
+
+.test-results-table th {
+    background-color: var(--navy);
+    color: var(--lightest-slate);
+    position: sticky;
+    top: 0;
+}
+
+.test-results-table tr:hover {
+    background-color: var(--lightest-navy);
+}
+
+.risk-indicator {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.low-risk {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: #4CAF50;
+}
+
+.medium-risk {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #FFC107;
+}
+
+.high-risk {
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #F44336;
+}
+
+.test-details-container {
+    padding: 1rem;
+}
+
+.test-metrics {
+    display: flex;
+    gap: 1.5rem;
+    margin: 1rem 0;
+}
+
+.metric {
+    background: var(--light-navy);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    flex: 1;
+}
+
+.metric-label {
+    display: block;
+    font-size: 0.9rem;
+    color: var(--slate);
+    margin-bottom: 0.5rem;
+}
+
+.metric-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--lightest-slate);
+}
+
+.selected-tests-summary {
+    background: var(--light-navy);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    margin-top: 1rem;
+}
+
+.view-details-btn {
+    background: var(--dark-slate-blue);
+    color: var(--lightest-slate);
+    border: none;
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.view-details-btn:hover {
+    background: var(--blue);
+}

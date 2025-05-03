@@ -44,6 +44,8 @@ function sendMessage() {
 
               // Check if FRT is recommended
               if (data.frt_recommended === 1) {
+                  // Save recommendation to history before displaying buttons
+                  saveRecommendation(data.chat_history || []);
                   displayFRTButtons();
               }
 
@@ -68,13 +70,15 @@ function displayFRTButtons() {
     liveFRTButton.textContent = "Live FRT";
     liveFRTButton.onclick = function() {
         $.ajax({
-            url: '/live_frt',
+            url: '/api/frt/live',  
             method: 'GET',
             success: function(response) {
                 displayBotMessage('Live FRT result: ' + response.result);
+                saveFRTResult(response.result, window.chatHistory || '');
             },
             error: function(error) {
                 console.error('Error:', error);
+                displayBotMessage('Error performing Live FRT: ' + (error.responseJSON?.error || 'Unknown error'));
             }
         });
     };
@@ -134,20 +138,54 @@ $('#file-input').change(function() {
     formData.append('video', file);
 
     $.ajax({
-        url: '/upload',
+        url: '/api/frt/upload',  // Changed from /upload to match the Flask route
         method: 'POST',
         data: formData,
         contentType: false,
         processData: false,
         success: function(response) {
             displayBotMessage('Upload successful! Video result: ' + response.result);
-            saveFRTResult(response.result, memory.chatHistory || '');
+            saveFRTResult(response.result, window.chatHistory || '');
         },
         error: function(error) {
             console.error('Error:', error);
+            displayBotMessage('Error uploading video: ' + (error.responseJSON?.error || 'Unknown error'));
         }
     });
 });
+
+// Add new function to save FRT recommendation to history
+async function saveRecommendation(chatHistory) {
+    try {
+        // Get the full conversation history
+        let conversationText = '';
+        if (chatHistory && chatHistory.length > 0) {
+            conversationText = chatHistory.map(msg => 
+                `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+            ).join('\n\n');
+        }
+        
+        const response = await fetch('/api/frt/save-result', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                maxDistance: 0, // No distance measured yet
+                riskLevel: 'Recommended', // Status is "Recommended"
+                symptoms: conversationText || 'No conversation recorded'
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to save recommendation');
+        }
+        
+        console.log('FRT recommendation saved to history');
+    } catch (error) {
+        console.error('Error saving FRT recommendation:', error);
+    }
+}
 
 // Update the saveFRTResult function to use the full conversation history
 async function saveFRTResult(result, symptoms) {
@@ -160,7 +198,7 @@ async function saveFRTResult(result, symptoms) {
             ).join('\n\n');
         }
         
-        const response = await fetch('/save-frt-result', {
+        const response = await fetch('/api/frt/save-result', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
