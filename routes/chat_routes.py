@@ -246,6 +246,7 @@ def chat_with_bot():
                     """, (formatted_conversation, existing_result[0]))
                 else:
                     # Insert new record only if there's a recommendation
+                    # Use parameterized queries to prevent SQL injection
                     cursor.execute("""
                         INSERT INTO FRTResults (UserID, MaxDistance, RiskLevel, Symptoms)
                         VALUES (?, ?, ?, ?)
@@ -254,7 +255,11 @@ def chat_with_bot():
                 conn.commit()
                 conn.close()
             except Exception as e:
+                # Avoid leaking detailed error information
                 print(f"Error saving chat history: {e}")
+                # Log the full error details but don't expose them to the client
+                import traceback
+                traceback.print_exc()
 
         return jsonify(result)
 

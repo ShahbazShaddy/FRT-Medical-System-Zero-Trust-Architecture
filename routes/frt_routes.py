@@ -253,19 +253,27 @@ def generate_report():
             'medicalHistory': patient_row[3] or 'Not provided'
         }
         
-        # Get test results - convert test_ids to strings for SQL placeholders
-        test_id_strings = [str(test_id) for test_id in test_ids]
-        test_id_placeholders = ','.join(['?' for _ in test_id_strings])
+        # Ensure test_ids contains only integers to prevent SQL injection
+        try:
+            test_ids = [int(test_id) for test_id in test_ids]
+            patient_id = int(patient_id)  # Ensure patient_id is also an integer
+        except ValueError:
+            return jsonify({'error': 'Invalid test ID or patient ID format'}), 400
         
-        query = f"""
+        # Get test results - create parameterized query with appropriate number of placeholders
+        if not test_ids:
+            return jsonify({'error': 'No test IDs provided'}), 400
+            
+        test_id_placeholders = ','.join(['?' for _ in test_ids])
+        
+        query = """
             SELECT ResultID, MaxDistance, RiskLevel, CreatedAt, Symptoms 
             FROM FRTResults 
-            WHERE ResultID IN ({test_id_placeholders}) AND UserID = ?
-            ORDER BY CreatedAt
-        """
+            WHERE ResultID IN ({}) AND UserID = ?
+        """.format(test_id_placeholders)
         
-        # Execute with string IDs and patient_id at the end
-        cursor.execute(query, test_id_strings + [str(patient_id)])
+        # Execute with integer IDs and patient_id at the end
+        cursor.execute(query, test_ids + [patient_id])
         
         test_results = []
         for row in cursor.fetchall():

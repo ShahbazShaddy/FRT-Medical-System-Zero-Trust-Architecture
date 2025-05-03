@@ -186,6 +186,9 @@ def get_doctor_dashboard_stats():
     except Exception as e:
         if 'conn' in locals():
             conn.close()
+        # SECURITY FIX: Don't expose detailed error information to client
+        import traceback
+        traceback.print_exc()  # Log detailed error for server-side debugging
         return jsonify({
-            'error': f'Failed to fetch dashboard statistics: {str(e)}'
+            'error': 'Failed to fetch dashboard statistics'
         }), 500

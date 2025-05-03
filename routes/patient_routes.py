@@ -54,8 +54,15 @@ def associate_with_doctor():
     data = request.json
     doctor_id = data.get('doctorId')
     
+    # Input validation
     if not doctor_id:
         return jsonify({'error': 'Doctor ID is required'}), 400
+    
+    # Validate doctor_id is an integer to prevent SQL injection
+    try:
+        doctor_id = int(doctor_id)
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid Doctor ID format'}), 400
     
     conn = get_db_connection()
     cursor = conn.cursor()
