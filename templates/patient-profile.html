@@ -11,11 +11,6 @@
     <div class="auth-container profile-container">
         <h1>Complete Your Patient Profile</h1>
         <p class="subtitle">Please provide the following information to complete your profile</p>
-        
-        <div class="debug-info"> <!-- Changed style to class -->
-            Debug info: User ID: {{ session['user_id'] }}, Role: {{ session['role'] }}
-        </div>
-        
         <form id="profileForm" class="auth-form">
             <input type="hidden" id="user-role" value="Patient">
             

@@ -12,10 +12,6 @@
         <h1>Complete Your Doctor Profile</h1>
         <p class="subtitle">Please provide your professional information to complete your profile</p>
         
-        <div class="debug-info"> <!-- Changed style to class -->
-            Debug info: User ID: {{ session['user_id'] }}, Role: {{ session['role'] }}
-        </div>
-        
         <form id="profileForm" class="auth-form">
             <input type="hidden" id="user-role" value="Doctor">
             

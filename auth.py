@@ -167,11 +167,6 @@ def signup():
         print(f"Missing required fields: name={bool(full_name)}, email={bool(email)}, password={bool(password)}, role={role}")
         return jsonify({'error': 'Missing or invalid required fields'}), 400
     
-    # Additional validation for Doctor role
-    if role == 'Doctor' and not pmdc_no:
-        print(f"Doctor signup missing PMDC_No")
-        return jsonify({'error': 'PMDC Registration Number is required for doctors'}), 400
-    
     # Validate doctor_id if patient is associated with a doctor
     if role == 'Patient' and has_doctor and doctor_id:
         conn = get_db_connection()
@@ -222,6 +217,12 @@ def signup():
             """, (user_id, has_doctor, doctor_id))
         else:  # Doctor
             print(f"Creating doctor profile with doctor_id: {doctor_id}, pmdc_no: {pmdc_no}")
+            # Accept any PMDC number without validation
+            if not pmdc_no or pmdc_no.strip() == "":
+                # If empty, set a default dummy PMDC number
+                pmdc_no = "TEMP-" + ''.join(random.choices(string.digits, k=6))
+                print(f"Using temporary PMDC number: {pmdc_no}")
+            
             try:
                 cursor.execute("""
                     INSERT INTO DoctorProfiles (UserID, DoctorID, PMDC_No)
@@ -313,3 +314,54 @@ def login():
 def logout():
     session.clear()
     return jsonify({'message': 'Logout successful'}), 200
+
+# PMDC Verification
+@auth_bp.route('/verify-pmdc', methods=['POST'])
+def verify_pmdc():
+    data = request.json
+    pmdc_no = data.get('pmdc_no')
+    
+    if not pmdc_no:
+        return jsonify({'verified': False, 'message': 'PMDC number is required'}), 400
+    
+    # Validate PMDC format (basic validation)
+    # This is a simple example - adjust the pattern according to actual PMDC format
+    if not isinstance(pmdc_no, str) or len(pmdc_no) < 5 or len(pmdc_no) > 15:
+        return jsonify({
+            'verified': False, 
+            'message': 'Invalid PMDC format. Please check and try again.'
+        }), 400
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Check if the PMDC number already exists in our database
+        cursor.execute("SELECT 1 FROM DoctorProfiles WHERE PMDC_No = ?", (pmdc_no,))
+        existing_pmdc = cursor.fetchone()
+        
+        # For demonstration purposes, we'll consider existing PMDCs as valid
+        # In a real system, you would connect to PMDC's official verification API
+        
+        if existing_pmdc:
+            # If it exists, it's already verified
+            return jsonify({
+                'verified': True,
+                'message': 'PMDC number verified successfully'
+            }), 200
+        else:
+            # For now, we'll accept all properly formatted PMDC numbers
+            # This is where you would normally make an API call to PMDC verification service
+            return jsonify({
+                'verified': True,
+                'message': 'PMDC number format is valid'
+            }), 200
+            
+    except Exception as e:
+        print(f"PMDC verification error: {str(e)}")
+        return jsonify({
+            'verified': False,
+            'message': 'An error occurred during verification'
+        }), 500
+    finally:
+        conn.close()

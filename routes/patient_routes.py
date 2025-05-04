@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, session, request
 from database import get_db_connection
+import re
 
 patient_bp = Blueprint('patient', __name__, url_prefix='/api/patient')
 
@@ -58,11 +59,16 @@ def associate_with_doctor():
     if not doctor_id:
         return jsonify({'error': 'Doctor ID is required'}), 400
     
-    # Validate doctor_id is an integer to prevent SQL injection
-    try:
-        doctor_id = int(doctor_id)
-    except (ValueError, TypeError):
-        return jsonify({'error': 'Invalid Doctor ID format'}), 400
+    # Clean up the doctor_id by removing any whitespace
+    doctor_id = str(doctor_id).strip()
+    
+    # Validate doctor_id format (should be a string of 6 alphanumeric characters)
+    # Make regex case-insensitive by using (?i) and allow both uppercase and lowercase
+    if not re.match(r'^[A-Za-z0-9]{6}$', doctor_id):
+        return jsonify({'error': 'Invalid Doctor ID format. Doctor ID should be a 6-character alphanumeric value.'}), 400
+    
+    # Convert doctor_id to uppercase to match how it's stored in the database
+    doctor_id = doctor_id.upper()
     
     conn = get_db_connection()
     cursor = conn.cursor()
