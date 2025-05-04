@@ -81,28 +81,103 @@ if (signupForm) {
     const pmdcField = document.getElementById('pmdc-no');
     const pmdcStatus = document.getElementById('pmdc-verification-status');
     let isPmdcVerified = false;
+    let verificationAttempts = 0;
+    const MAX_VERIFICATION_ATTEMPTS = 5;
+    const ATTEMPT_TIMEOUT_MS = 30000; // 30 seconds timeout after max attempts
+    let lastAttemptTime = 0;
+    
+    // Function to validate PMDC number format
+    function isValidPmdcFormat(pmdc) {
+        // Implement proper PMDC format validation (example pattern)
+        const pmdcPattern = /^[A-Z0-9-]{5,15}$/i;
+        return pmdcPattern.test(pmdc);
+    }
+    
+    // Function to sanitize input to prevent XSS
+    function sanitizeInput(input) {
+        return input.replace(/[<>&"']/g, function(match) {
+            return {
+                '<': '&lt;',
+                '>': '&gt;',
+                '&': '&amp;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[match];
+        });
+    }
     
     if (verifyPmdcButton) {
-        verifyPmdcButton.addEventListener('click', function() {
+        verifyPmdcButton.addEventListener('click', async function() {
+            const now = Date.now();
+            
+            // Rate limiting check
+            if (verificationAttempts >= MAX_VERIFICATION_ATTEMPTS && 
+                (now - lastAttemptTime) < ATTEMPT_TIMEOUT_MS) {
+                const remainingTime = Math.ceil((ATTEMPT_TIMEOUT_MS - (now - lastAttemptTime))/1000);
+                pmdcStatus.textContent = `Too many verification attempts. Please try again in ${remainingTime} seconds.`;
+                pmdcStatus.className = 'not-verified';
+                return;
+            }
+            
+            if ((now - lastAttemptTime) >= ATTEMPT_TIMEOUT_MS) {
+                verificationAttempts = 0;
+            }
+            
             const pmdcNo = pmdcField.value.trim();
             
+            // Input validation
             if (!pmdcNo) {
                 pmdcStatus.textContent = 'Please enter a PMDC Registration Number';
                 pmdcStatus.className = 'not-verified';
                 return;
             }
             
-            // For now, simulate verification (all numbers are considered valid)
-            isPmdcVerified = true;
-            pmdcStatus.textContent = 'Verified successfully';
-            pmdcStatus.className = 'verified';
+            if (!isValidPmdcFormat(pmdcNo)) {
+                pmdcStatus.textContent = 'Invalid PMDC format. Please check and try again.';
+                pmdcStatus.className = 'not-verified';
+                return;
+            }
             
-            // In a real application, you would call an API endpoint
-            // fetch('/auth/verify-pmdc', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({ pmdc_no: pmdcNo })
-            // }).then(...)
+            // Show verification in progress
+            pmdcStatus.textContent = 'Verifying...';
+            pmdcStatus.className = 'verifying';
+            
+            // Increment attempt counter and record time
+            verificationAttempts++;
+            lastAttemptTime = now;
+            
+            try {
+                // Get CSRF token from meta tag (assuming it's set in your HTML)
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                
+                const response = await fetch('/auth/verify-pmdc', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ pmdc_no: sanitizeInput(pmdcNo) })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.verified) {
+                    isPmdcVerified = true;
+                    pmdcStatus.textContent = 'Verified successfully';
+                    pmdcStatus.className = 'verified';
+                    // Disable the field after successful verification
+                    pmdcField.setAttribute('readonly', true);
+                } else {
+                    isPmdcVerified = false;
+                    pmdcStatus.textContent = data.message || 'Verification failed. Please check the number and try again.';
+                    pmdcStatus.className = 'not-verified';
+                }
+            } catch (error) {
+                console.error('PMDC verification error:', error);
+                isPmdcVerified = false;
+                pmdcStatus.textContent = 'Service unavailable. Please try again later.';
+                pmdcStatus.className = 'not-verified';
+            }
         });
     }
     

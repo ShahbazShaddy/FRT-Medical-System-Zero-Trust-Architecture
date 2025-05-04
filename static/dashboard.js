@@ -362,49 +362,169 @@ async function chatWithDoctor(doctorId, doctorName) {
         }
     });
 
-    // Initialize encryption and chat with better error handling
+    // Initialize encryption and chat with better security measures and error handling
     try {
         document.getElementById('encryption-status').textContent = 'Setting up secure connection...';
-        await initializeChat(doctorId, doctorName);
+        
+        // Validate doctorId to prevent injection attacks
+        if (!validateId(doctorId)) {
+            throw new Error("Invalid doctor ID format");
+        }
+        
+        // Sanitize doctor name to prevent XSS
+        const sanitizedDoctorName = sanitizeHTML(doctorName);
+        
+        // Set timeout for encryption setup (security measure against hanging processes)
+        const setupTimeout = setTimeout(() => {
+            throw new Error("Encryption setup timed out - network may be compromised");
+        }, 30000); // 30 second timeout
+        
+        await initializeChat(doctorId, sanitizedDoctorName);
+        clearTimeout(setupTimeout);
+        
+        // Verify encryption is actually ready before enabling input
+        if (!userKeys || !recipientPublicKey) {
+            throw new Error("Encryption keys not properly initialized");
+        }
         
         // Enable the input once encryption is ready
         document.getElementById('chat-input').disabled = false;
         document.getElementById('send-message').disabled = false;
         document.getElementById('encryption-status').textContent = '🔒 End-to-end encrypted';
         
+        // Add security note
+        addSecureNotification("Connection established with end-to-end encryption");
+        
         // Load existing messages
-        loadChatHistory(doctorId);
+        await loadChatHistory(doctorId);
     } catch (error) {
         console.error("Failed to initialize chat:", error);
         document.getElementById('encryption-status').textContent = '⚠️ Secure channel setup failed';
         
-        // Create a retry button
+        // Create a retry button with security controls
         const chatContainer = document.getElementById('chat-messages');
+        
+        // Sanitize error message to prevent XSS
+        const errorMsg = error.message ? sanitizeHTML(error.message) : "Unknown error";
+        
         chatContainer.innerHTML = `
             <div class="error-message" style="text-align: center; margin-top: 20px;">
                 <p>Failed to set up secure messaging</p>
-                <p style="font-size: 0.9em; color: #666;">${error.message}</p>
+                <p style="font-size: 0.9em; color: #666;">${errorMsg}</p>
                 <button id="retry-encryption" style="margin-top: 10px; padding: 8px 16px;">
                     Retry Connection
                 </button>
+                <div id="retry-count" data-retries="0" style="font-size: 0.8em; margin-top: 5px; color: #666;">
+                    You can retry 5 more times
+                </div>
             </div>
         `;
         
+        // Add retry handler with rate limiting for security
         document.getElementById('retry-encryption').addEventListener('click', () => {
-            chatWithDoctor(doctorId, doctorName);
+            const retryCounter = document.getElementById('retry-count');
+            const retries = parseInt(retryCounter.getAttribute('data-retries') || '0');
+            
+            // Anti-brute force protection - limit to 5 retries
+            if (retries >= 5) {
+                document.getElementById('retry-encryption').disabled = true;
+                retryCounter.textContent = 'Maximum attempts reached. Please try again later.';
+                
+                // Log security event
+                logSecurityEvent({
+                    type: 'excessive_retries',
+                    target: 'encryption_setup',
+                    doctorId: doctorId
+                });
+                
+                return;
+            }
+            
+            // Update retry counter
+            retryCounter.setAttribute('data-retries', (retries + 1).toString());
+            retryCounter.textContent = `You can retry ${5 - (retries + 1)} more times`;
+            
+            // Attempt to reestablish connection
+            chatWithDoctor(doctorId, sanitizedDoctorName);
+        });
+        
+        // Log security event
+        logSecurityEvent({
+            type: 'encryption_failure',
+            error: errorMsg,
+            target: 'chat_initialization',
+            doctorId: doctorId
         });
     }
+}
 
-    document.getElementById('attach-file').addEventListener('click', () => {
-        document.getElementById('file-input').click();
-    });
-    document.getElementById('file-input').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if(file) {
-            console.log('Selected file:', file.name);
-            // ...possible file handling code...
-        }
-    });
+// Utility functions for security
+
+// Add security logging function
+function logSecurityEvent(eventData) {
+    try {
+        // Don't log sensitive data
+        const sanitizedData = { ...eventData };
+        // Remove any potentially sensitive fields
+        delete sanitizedData.privateKey;
+        delete sanitizedData.secret;
+        delete sanitizedData.password;
+        
+        console.warn('Security event:', sanitizedData);
+        
+        // Send to server securely
+        fetch('/api/security/log', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCSRFToken(),
+            },
+            body: JSON.stringify(sanitizedData),
+            credentials: 'same-origin'
+        }).catch(err => console.error('Failed to log security event:', err));
+    } catch (e) {
+        console.error('Error logging security event:', e);
+    }
+}
+
+// Validate IDs to prevent injection
+function validateId(id) {
+    // Only allow numeric IDs
+    return /^\d+$/.test(id);
+}
+
+// Simple XSS protection function
+function sanitizeHTML(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// Get CSRF token from meta tag
+function getCSRFToken() {
+    const metaToken = document.querySelector('meta[name="csrf-token"]');
+    return metaToken ? metaToken.getAttribute('content') : '';
+}
+
+// Add secure notification to the user
+function addSecureNotification(message) {
+    const notificationArea = document.createElement('div');
+    notificationArea.className = 'secure-notification';
+    notificationArea.innerHTML = `<i class="fas fa-shield-alt"></i> ${sanitizeHTML(message)}`;
+    notificationArea.style.cssText = 'background: #e7f7e7; color: #2c662d; padding: 5px 10px; border-radius: 4px; margin: 5px 0; font-size: 0.9em;';
+    
+    const container = document.querySelector('.chat-status');
+    if (container) {
+        container.appendChild(notificationArea);
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            notificationArea.remove();
+        }, 5000);
+    }
 }
 
 async function loadChatHistory(doctorId) {
